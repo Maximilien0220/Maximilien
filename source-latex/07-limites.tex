@@ -1,0 +1,111 @@
+% ================== Chapitre 7 : hypotheses, limites, conclusion ============
+\chapter{Hypothèses, limites et points à valider}
+\label{ch:limites}
+
+La qualité d'un dossier de conception tient autant à ce qu'il établit qu'à ce
+qu'il signale comme non établi. Les éléments ci-dessous distinguent les
+hypothèses prises faute de donnée, les points dont la vérification conditionne
+l'application, et les limites structurelles que la conception ne peut pas lever.
+
+\section{Hypothèses formulées}
+
+\begin{longtable}{@{}R{0.27}R{0.58}R{0.15}@{}}
+\caption{Hypothèses et choix à confirmer}\label{tab:hypotheses}\\
+\toprule
+\textbf{Élément} & \textbf{Justification} & \textbf{Statut}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Élément} & \textbf{Justification} & \textbf{Statut}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Durée de bail DHCP $B = 3\,600$ s &
+  Donnée manquante, relevant de T004. Elle fixe la durée de vie des
+  enregistrements dynamiques et la quarantaine par l'inégalité
+  \eqref{eq:ttl}, qui reste valable si la valeur change. &
+  Hypothèse\\
+Quarantaine $Q = 900$ s avant réutilisation d'une adresse &
+  Le document 03 laisse cette durée \statut{à valider}. La valeur proposée
+  satisfait \eqref{eq:ttl} avec une marge $\delta = 300$ s. &
+  Proposition\\
+Récursion complète vers la racine publique &
+  Préférée à une redirection vers un résolveur d'opérateur, dont le
+  comportement n'est pas maîtrisé et dont la disponibilité dépendrait d'un
+  équipement non manageable. & Choix\\
+VNI 30404 pour le VNet Services &
+  Pris dans la réserve de travail 30404 à 30408 du document 02. L'identifiant
+  réellement attribué par le contrôleur doit être relevé et rapproché de cette
+  réserve. & Proposition\\
+Moteur de stockage SQLite &
+  Suffisant pour $N_Z = 113$ zones et un régime courant $N_R \approx 1\,330$
+  enregistrements. Un moteur relationnel partagé reste une extension. &
+  Choix\\
+\end{longtable}
+
+\section{Points à vérifier avant application}
+
+\begin{itemize}
+  \item \textbf{Versions exactes des logiciels.} Les directives \opt{primary} et
+    \opt{secondary} supposent une version 4.5 ou supérieure du serveur
+    autoritatif. La branche 5 du résolveur propose un format de configuration
+    YAML qu'il faut distinguer du format classique employé ici. La disponibilité
+    de la journalisation dnstap dépend également des options de compilation du
+    paquet retenu.
+  \item \textbf{Collecteur de journalisation.} Le composant qui consomme le flux
+    dnstap et produit les fichiers lus par Monitoring n'est pas arrêté. Son
+    choix doit respecter la règle d'absence d'initiation vers Monitoring.
+  \item \textbf{Comportement réel de la sortie externe.} La récursion vers la
+    racine suppose que le routeur R1 laisse passer le port 53 sortant en UDP et
+    en TCP sans altération. Le document 01 rappelle que les fonctions réelles de
+    ce routeur restent à vérifier.
+  \item \textbf{Correspondance entre session VPN et tenant.} Tant qu'elle n'est
+    pas fournie par le lot VPN et IAM, le pool VPN utilisateur reste privé de
+    résolution interne, comme expliqué à la section~\ref{sec:vpn}.
+  \item \textbf{Coût du script de politique.} Le script de la
+    section~\ref{sec:script} s'exécute à chaque requête. Son incidence sur la
+    latence doit être mesurée à la charge attendue avant mise en service, même
+    si son contenu est volontairement minimal.
+\end{itemize}
+
+\section{Limites structurelles assumées}
+
+\begin{itemize}
+  \item La redondance du service couvre la perte d'une machine virtuelle ou
+    d'un hôte. Elle ne couvre ni la perte du commutateur SW1, ni celle du
+    routeur R1, qui restent des dépendances communes imposées par le cadrage
+    matériel.
+  \item La politique de vue repose sur l'adresse source. Elle suppose donc que
+    l'usurpation d'adresse à l'intérieur d'un VNet est traitée par la
+    segmentation et les protections du lot VNet et SDN. Le DNS ne constitue pas,
+    à lui seul, un mécanisme d'authentification du demandeur.
+  \item Un tenant peut énumérer ses propres noms. Cette propriété est inhérente
+    à un service de résolution ouvert à ses clients et ne franchit aucune
+    frontière de tenant.
+  \item Aucun déploiement n'a été réalisé et aucune mesure n'a été produite. Les
+    volumes, les délais et les capacités énoncés sont des estimations de
+    conception, à confronter à la maquette avant toute mise en service.
+\end{itemize}
+
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Ce dossier fournit ce que la tâche T005 demandait : une architecture de
+résolution arrêtée, un espace de nommage entièrement dérivé du plan d'adressage
+du document 02, un mécanisme démontré d'isolation entre domaines, des
+configurations applicables pour les quatre instances, et un cycle de vie des
+enregistrements compatible avec la machine d'états du document 03.
+
+Trois décisions en constituent l'ossature. La séparation stricte des rôles
+autoritatif et récursif, qui rend l'isolation applicable plutôt que seulement
+souhaitée. L'indexation de la politique de vue sur l'étiquette $\tau(a)$
+calculée avant le cache, qui empêche le cache de contourner la politique. Enfin
+le propriétaire d'écriture unique, qui rend la publication rejouable et la
+réconciliation possible.
+
+Le service reste conditionné aux hypothèses de ce chapitre et à la simulation
+préalable exigée par \exig{net-fr-020}. L'exécution des contrôles du
+chapitre~\ref{ch:recette}, la mesure des cibles de reconstruction et l'archivage
+des preuves relèvent de la tâche T009, qui interviendra lorsque les lots DHCP,
+temps et agent seront disponibles.

@@ -1,0 +1,388 @@
+% ================== Chapitre 2 : conception du service de resolution ========
+\chapter{Conception du service de résolution}
+\label{ch:conception}
+
+\section{Séparation des rôles autoritatif et récursif}
+\label{sec:roles}
+
+Le document 03 impose de distinguer au moins deux rôles de service et précise
+qu'une instance récursive partagée non filtrée est insuffisante. Cette
+séparation n'est pas une préférence de mise en \oe uvre : elle découle de trois
+propriétés incompatibles sur une même instance.
+
+\begin{itemize}
+  \item Un serveur autoritatif doit répondre avec autorité pour les zones qu'il
+    détient et ne doit rien résoudre d'autre. Un résolveur doit au contraire
+    parcourir l'arbre public et conserver un cache.
+  \item Les populations de clients diffèrent. L'autoritatif n'a que quatre
+    interlocuteurs légitimes : son homologue, les deux résolveurs et l'agent. Le
+    résolveur sert au contraire l'ensemble des machines autorisées.
+  \item Les surfaces d'attaque diffèrent. Exposer l'autoritatif aux tenants
+    reviendrait à leur offrir un point d'interrogation direct de toutes les
+    zones hébergées, que seule une politique interne pourrait ensuite
+    restreindre.
+\end{itemize}
+
+La conception retient donc deux serveurs autoritatifs, \opt{ns1} et \opt{ns2},
+qui ne sont joignables que depuis le VNet Services, et deux résolveurs
+récursifs, \opt{rec1} et \opt{rec2}, qui constituent le seul point de résolution
+offert aux machines clientes. Les résolveurs atteignent l'espace interne par une
+redirection explicite de zone, et l'espace public par une récursion ordinaire.
+
+\begin{figure}[H]
+\centering
+\figArchitecture
+\caption{Architecture du service DNS : placement des quatre instances, flux
+  autorisés et dépendances communes}
+\label{fig:architecture}
+\end{figure}
+
+\section{Espace de nommage, zones directes et zones inverses}
+\label{sec:nommage}
+
+La zone \zone{gandal.internal} est conservée comme proposition de nommage
+interne, conformément au document 03. Le suffixe est pertinent : l'ICANN a
+réservé le domaine de premier niveau \zone{internal} à l'usage privé et ne le
+délègue pas dans la racine publique. Un nom construit sous ce suffixe ne peut
+donc pas entrer en collision avec un nom Internet, ce qui n'est pas le cas d'un
+suffixe arbitraire.
+
+\subsection{Découpage retenu}
+
+\begin{itemize}
+  \item \zone{gandal.internal} porte le SOA, les enregistrements NS du service
+    et les adresses des quatre serveurs, puis délègue ses zones filles.
+  \item \zone{infra.gandal.internal} contient l'inventaire d'infrastructure :
+    hôtes, orchestrateur, bastion, machines pfSense, services de base et
+    collecteurs.
+  \item \zone{tenant-0NN.gandal.internal}, pour \opt{NN} de \opt{001} à
+    \opt{050}, contient la passerelle du tenant et les noms de ses machines.
+\end{itemize}
+
+Les serveurs de noms sont volontairement nommés au niveau de l'apex, sous la
+forme \zone{ns1.gandal.internal}, et non à l'intérieur de
+\zone{infra.gandal.internal}. Ce choix évite une délégation dont les serveurs
+porteraient un nom situé sous la zone déléguée, configuration qui exige des
+enregistrements de collage dans la zone parente et complique inutilement la
+reconstruction.
+
+Le plan d'adressage du document 02 rend la correspondance entre un tenant et ses
+zones entièrement déterministe. En notant $T=50$ le nombre de tenants du
+périmètre minimal, elle s'écrit
+\begin{align}
+  \mathcal{P}(n) &= \texttt{10.30.}(63+n)\texttt{.0/24},
+    & 1 &\leqslant n \leqslant T, \label{eq:prefixe}\\[2pt]
+  \mathcal{D}(n) &= \texttt{tenant-0}\langle n\rangle\texttt{.gandal.internal},
+    \label{eq:directe}\\[2pt]
+  \mathcal{R}(n) &= (63+n)\texttt{.30.10.in-addr.arpa},
+    \label{eq:inverse}
+\end{align}
+où $\langle n\rangle$ désigne le numéro du tenant écrit sur trois chiffres. Le
+tenant 1 occupe ainsi \ip{10.30.64.0/24} et le tenant 50 occupe
+\ip{10.30.113.0/24}, les quatorze préfixes \ip{10.30.114.0/24} à
+\ip{10.30.127.0/24} restant en réserve à l'intérieur du \ip{/18}.
+
+\subsection{Résolution inverse}
+
+Toutes les plages du projet appartiennent au bloc \ip{10.30.0.0/16} et sont
+découpées en \ip{/24}, en \ip{/28} ou en \ip{/29}. Comme le projet détient
+l'intégralité de l'espace, une zone inverse par \ip{/24} suffit à couvrir les
+sous-réseaux plus petits qu'elle contient : les quatre \ip{/28} de la plage DMZ
+et VPN relèvent tous de \zone{16.30.10.in-addr.arpa}, et les trois \ip{/29} de
+synchronisation de \zone{17.30.10.in-addr.arpa}. Le découpage sans classe du
+RFC 2317, utile lorsqu'un \ip{/24} est partagé entre plusieurs autorités, n'a
+donc aucune raison d'être introduit ici.
+
+\begin{figure}[H]
+\centering
+\figZones
+\caption{Arborescence des zones directes et inverses}
+\label{fig:zones}
+\end{figure}
+
+Le nombre total de zones à créer se déduit de ce découpage. En comptant la zone
+racine interne et la zone d'infrastructure, les onze zones inverses
+d'infrastructure, puis une zone directe et une zone inverse par tenant,
+\begin{equation}
+  N_Z = \underbrace{2}_{\text{apex et infra}}
+      + \underbrace{11}_{\text{inverses d'infrastructure}}
+      + \underbrace{2T}_{\text{zones des tenants}}
+      = 2T + 13 = 113 .
+  \label{eq:nzones}
+\end{equation}
+
+\begin{longtable}{@{}R{0.21}R{0.30}C{0.13}R{0.36}@{}}
+\caption{Inventaire des zones à créer}\label{tab:zones}\\
+\toprule
+\textbf{Catégorie} & \textbf{Nom ou intervalle} & \textbf{Nombre} &
+\textbf{Contenu}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Catégorie} & \textbf{Nom ou intervalle} & \textbf{Nombre} &
+\textbf{Contenu}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Zone racine interne & \zone{gandal.internal} & 1 &
+  SOA, NS, adresses des serveurs, délégations\\
+Zone d'infrastructure & \zone{infra.gandal.internal} & 1 &
+  environ 40 noms, statiques\\
+Zones tenant & \zone{tenant-001} à \zone{tenant-050} \zone{.gandal.internal} &
+  50 & passerelle statique, machines publiées par l'agent\\
+Inverses d'infrastructure & \zone{0, 1, 2, 4, 5, 6, 7, 8, 10, 16, 17
+  .30.10.in-addr.arpa} & 11 &
+  un \ip{/24} inverse couvre les \ip{/28} et \ip{/29} qu'il contient\\
+Inverses tenant & \zone{64} à \zone{113} \zone{.30.10.in-addr.arpa} & 50 &
+  tenant $n$ associé à l'octet $63+n$\\
+\midrule
+\textbf{Total} & & \textbf{113} &
+  volume compatible avec une base locale\\
+\end{longtable}
+
+\section{Placement, redondance et domaines de panne}
+\label{sec:placement}
+
+L'exigence \exig{net-nfr-001} demande deux instances par service, et le document
+Underlay rappelle que la présence de plusieurs serveurs ne garantit pas leur
+indépendance si tous partagent le même hyperviseur. Le placement doit donc
+satisfaire une contrainte d'anti-affinité par rôle : les deux membres d'une
+paire ne résident jamais sur le même hôte.
+
+Avec quatre instances et trois hôtes, un hôte en porte nécessairement deux. La
+répartition retenue place \opt{ns1} et \opt{rec2} sur H1, \opt{rec1} sur H2 et
+\opt{ns2} sur H3. Elle est préférable à un regroupement sur deux hôtes
+seulement, car elle laisse trois instances sur quatre en service après la perte
+de H2 ou de H3.
+
+\begin{longtable}{@{}R{0.17}R{0.17}R{0.17}R{0.49}@{}}
+\caption{Effet de la perte d'un hôte sur le service de résolution}
+\label{tab:pannes}\\
+\toprule
+\textbf{Scénario} & \textbf{Autoritatifs restants} &
+\textbf{Récursifs restants} & \textbf{Conséquence}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Scénario} & \textbf{Autoritatifs restants} &
+\textbf{Récursifs restants} & \textbf{Conséquence}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Fonctionnement nominal & ns1 (H1), ns2 (H3) & rec1 (H2), rec2 (H1) &
+  Service complet\\
+Perte de H1 & ns2 & rec1 &
+  Un serveur de chaque rôle, capacité réduite de moitié ; ns2 devient le seul
+  autoritatif et ne reçoit plus de transfert, donc plus de publication\\
+Perte de H2 & ns1, ns2 & rec2 & Résolution et publication nominales\\
+Perte de H3 & ns1 & rec1, rec2 &
+  Publication nominale, réplication suspendue jusqu'au retour de ns2\\
+Perte de SW1 & aucune & aucune &
+  Hors de portée de la redondance logicielle ; limite matérielle assumée par le
+  cadrage\\
+\end{longtable}
+
+\begin{encadredecision}
+\titreencadredec{Conséquence à retenir pour la reprise}
+La perte de H1 supprime le seul serveur autoritatif primaire. La résolution se
+poursuit sur \opt{ns2}, qui continue de servir les zones transférées jusqu'à
+expiration du paramètre \opt{expire} du SOA, fixé à sept jours. En revanche,
+aucune nouvelle publication n'est possible pendant cette période. La procédure
+de reprise consiste à restaurer \opt{ns1} depuis l'export des zones, et non à
+promouvoir \opt{ns2}, afin de conserver un propriétaire d'écriture unique.
+
+\smallskip
+Cette distinction entre continuité du trafic existant et impossibilité
+d'opérations nouvelles correspond exactement au résultat attendu du test
+\opt{G04} du document 01.
+\end{encadredecision}
+
+\section{Politique de durée de vie et cohérence avec le bail DHCP}
+\label{sec:ttl}
+
+Les durées de vie ne sont pas un réglage de confort : elles déterminent le délai
+pendant lequel une réponse périmée peut encore circuler après la suppression
+d'un enregistrement. Deux contraintes les gouvernent. La durée de vie d'un
+enregistrement dynamique doit rester nettement inférieure à la durée $B$ du bail
+qui l'a produit, et une adresse ne peut être réattribuée qu'après expiration des
+caches qui ont pu mémoriser son ancien nom. En notant $Q$ la durée de
+quarantaine et $\delta$ une marge de sécurité,
+\begin{equation}
+  \mathrm{TTL}_A \;\leqslant\; \frac{B}{4}
+  \qquad\text{et}\qquad
+  Q \;\geqslant\; \mathrm{TTL}_A + \mathrm{TTL}_{\mathrm{nég}} + \delta .
+  \label{eq:ttl}
+\end{equation}
+Avec l'hypothèse $B = 3\,600$ secondes retenue plus bas, le choix
+$\mathrm{TTL}_A = \mathrm{TTL}_{\mathrm{nég}} = 300$ secondes et
+$\delta = 300$ secondes conduit à $Q = 900$ secondes et respecte les deux
+inégalités avec un facteur de sécurité confortable.
+
+\begin{longtable}{@{}R{0.28}R{0.14}R{0.58}@{}}
+\caption{Politique de durée de vie}\label{tab:ttl}\\
+\toprule
+\textbf{Paramètre} & \textbf{Valeur} & \textbf{Justification}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Paramètre} & \textbf{Valeur} & \textbf{Justification}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+SOA \opt{refresh} & 3\,600 s &
+  Fréquence de contrôle de ns2 en l'absence de NOTIFY ; la réplication normale
+  reste déclenchée par NOTIFY.\\
+SOA \opt{retry} & 900 s & Nouvelle tentative après échec de transfert.\\
+SOA \opt{expire} & 604\,800 s &
+  Durée pendant laquelle ns2 continue de servir une zone sans contact avec ns1 ;
+  dimensionnée pour couvrir une panne longue de H1.\\
+SOA \opt{minimum} & 300 s &
+  Durée de mémorisation d'une réponse négative. Une valeur courte évite qu'un
+  nom publié tardivement reste introuvable.\\
+Enregistrements d'infrastructure & 3\,600 s &
+  Noms stables, modifiés par une opération planifiée.\\
+Enregistrements A et PTR tenant & 300 s &
+  Publiés et retirés avec le bail, soit $B/12$ sous l'hypothèse
+  $B = 3\,600$ s.\\
+Quarantaine $Q$ avant réutilisation & 900 s &
+  Proposée à l'IPAM. Elle satisfait l'inégalité \eqref{eq:ttl} et répond au
+  point laissé \statut{à valider} par le document 03.\\
+\end{longtable}
+
+La durée de bail de 3\,600 secondes est une hypothèse de travail : elle relève
+de la tâche T004. Si elle est modifiée, les deux inégalités \eqref{eq:ttl}
+restent la règle à conserver.
+
+\section{Dimensionnement et contraintes de transport}
+\label{sec:dimensionnement}
+
+\subsection{Volume d'enregistrements}
+
+Le volume à servir se déduit du plan d'adressage. Chaque tenant dispose d'un
+pool dynamique de 190 adresses, de \ip{.10} à \ip{.199}. En notant $L$ le nombre
+de baux simultanés, $T$ le nombre de tenants et $H$ le nombre de noms
+d'infrastructure, chaque bail produit un enregistrement A et son PTR, chaque
+tenant apporte son SOA, ses deux NS et le couple A et PTR de sa passerelle, et
+chaque nom d'infrastructure apporte un A et un PTR :
+\begin{equation}
+  N_R = 2L + 5T + 2H .
+  \label{eq:nrecords}
+\end{equation}
+La cible historique de 500 baux simultanés, avec $T = 50$ et $H \approx 40$,
+conduit à un régime courant
+\[
+  N_R = 2\times 500 + 5\times 50 + 2\times 40 = 1\,330
+\]
+enregistrements. Dans l'hypothèse haute où les cinquante pools seraient pleins,
+$L_{\max} = 190\,T = 9\,500$ et
+\[
+  N_R^{\max} = 2\times 9\,500 + 250 + 80 = 19\,330 ,
+\]
+soit un peu moins de vingt mille enregistrements.
+
+Ce volume ne justifie pas un serveur de base de données dédié. Le moteur de
+stockage SQLite intégré à PowerDNS est retenu pour le périmètre minimal, la
+réplication étant assurée par transfert de zone et non par duplication de base.
+Un moteur relationnel partagé constitue une extension à envisager si la mesure
+du débit d'écriture de l'agent le justifie.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Dimensionnement proposé des machines virtuelles}\label{tab:vm}
+\begin{tabular}{@{}R{0.14}C{0.13}C{0.12}C{0.12}R{0.49}@{}}
+\toprule
+\textbf{Instance} & \textbf{Processeur} & \textbf{Mémoire} & \textbf{Disque} &
+\textbf{Remarque}\\
+\midrule
+ns1, ns2 & 2 vCPU & 2 GiB & 20 GiB &
+  Base SQLite, journal local, export des zones\\
+rec1, rec2 & 2 vCPU & 4 GiB & 20 GiB &
+  Mémoire dimensionnée pour le cache d'enregistrements et le cache paquet\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Taille des réponses et MTU}
+
+Le document 02 établit la taille utile laissée au paquet IP interne par
+l'encapsulation VXLAN sur IPv4, à partir d'une MTU externe de 1\,500 octets :
+\begin{equation}
+  \mathrm{MTU}_{\text{utile}}
+    = 1\,500 - \underbrace{20}_{\text{IPv4}}
+             - \underbrace{8}_{\text{UDP}}
+             - \underbrace{8}_{\text{VXLAN}}
+             - \underbrace{14}_{\text{Ethernet interne}}
+    = 1\,450 \ \text{octets}.
+  \label{eq:mtu}
+\end{equation}
+Une réponse DNS qui dépasserait cette taille serait fragmentée ou perdue selon
+le comportement des équipements intermédiaires, et ce type de défaut se
+manifeste de manière intermittente, donc difficile à diagnostiquer.
+
+La taille annoncée par EDNS est en conséquence fixée à 1\,232 octets sur les
+quatre instances. Cette valeur correspond à la recommandation issue du DNS Flag
+Day 2020 et laisse une marge
+\[
+  \mathrm{MTU}_{\text{utile}} - 1\,232 = 218 \ \text{octets}
+\]
+pour les en-têtes IP et UDP du paquet interne lui-même. Au-delà de ce seuil, la
+réponse est tronquée et le client bascule en TCP, comportement prévisible et
+observable. Les règles de pare-feu doivent donc autoriser le port 53 en TCP
+comme en UDP, point souvent omis.
+
+\section{Profil DNS par tenant et interfaces consommatrices}
+\label{sec:profil}
+
+Le modèle IPAM minimal du document 03 comporte un champ \opt{DNS\_profile} dont
+le contenu n'est pas spécifié. Ce dossier le définit, car il constitue le point
+de passage unique entre la conception DNS, les options distribuées par DHCP et
+les paramètres remis aux Templates.
+
+\begin{lstlisting}[caption={Objet profil DNS porté par l'IPAM, instancié pour le
+  tenant 7, de préfixe 10.30.70.0/24},label=lst:profil]
+{
+  "profile_id":         "tenant-standard-v1",
+  "tenant_id":          7,
+  "resolvers":          ["10.30.4.12", "10.30.4.13"],
+  "search_domains":     ["tenant-007.gandal.internal"],
+  "forward_zone":       "tenant-007.gandal.internal",
+  "reverse_zone":       "70.30.10.in-addr.arpa",
+  "record_ttl":         300,
+  "publication":        "agent",
+  "external_recursion": true,
+  "view_tag":           1007
+}
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Consommation du profil DNS par les interfaces du lot Services Network}
+\label{tab:profil}
+\begin{tabular}{@{}R{0.26}R{0.74}@{}}
+\toprule
+\textbf{Interface} & \textbf{Usage du profil}\\
+\midrule
+IF-NS-02, vers DHCP &
+  \opt{resolvers} alimente l'option 6, \opt{search\_domains} l'option 15 et
+  l'option 119. Le serveur Kea ne redéfinit aucune de ces valeurs localement.\\
+IF-NS-06, vers Templates &
+  \opt{resolvers}, \opt{search\_domains} et la MTU utile sont remis au mécanisme
+  d'initialisation de la machine. Le profil ne contient aucun secret.\\
+IF-NS-03, vers VNet et SDN &
+  \opt{view\_tag} matérialise le profil de résolution et la liste de contrôle
+  d'accès associée au tenant.\\
+IF-NS-05, vers Backend par l'agent &
+  \opt{forward\_zone} et \opt{reverse\_zone} désignent les deux zones à modifier
+  lors d'une publication ou d'un retrait.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Un second profil, \opt{admin-v1}, désigne les mêmes résolveurs avec le domaine
+de recherche \zone{infra.gandal.internal} et l'étiquette de vue 1. Il s'applique
+aux machines du plan de gestion et au pool VPN administrateur.

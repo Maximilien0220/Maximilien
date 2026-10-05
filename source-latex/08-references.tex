@@ -1,0 +1,86 @@
+% ================== References =============================================
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Références}
+\markboth{Références}{}
+
+\begin{thebibliography}{99}
+\small
+
+\bibitem{doc01} Projet GANDAL. \textbf{Architecture globale GANDAL}, document
+  01, version 1.2, 4 octobre 2026. Besoins, exigences, responsabilités et
+  interfaces du datacenter.
+
+\bibitem{doc02} Projet GANDAL. \textbf{Conception VNet et SDN GANDAL}, document
+  02, version 1.2, 4 octobre 2026. Plan d'adressage détaillé, réservations VNI,
+  MTU et matrice de flux. Référence des plages consommées par ce dossier.
+
+\bibitem{doc03} Projet GANDAL. \textbf{Services réseau GANDAL}, document 03,
+  version 1.2, 4 octobre 2026. IPAM, DHCP, DNS, temps et provisionnement des
+  machines virtuelles. Arbitrage logiciel et machine d'états de création.
+
+\bibitem{doc04} Projet GANDAL. \textbf{Topologie cible GANDAL}, document 04,
+  version 1.2, 4 octobre 2026. Inventaire des objets à représenter et
+  conventions de dessin.
+
+\bibitem{underlay} Projet GANDAL. \textbf{Services réseau et infrastructure
+  Underlay}, état de l'art technique, octobre 2026. Adressage, résolution de
+  noms, dépendances de démarrage et accès d'administration.
+
+\bibitem{suivi} Projet GANDAL. \textbf{Suivi des tâches de l'équipe 20}, 2026.
+  Attribution des tâches T001 à T009.
+
+\bibitem{rfc1034} IETF. \textbf{RFC 1034, Domain names, concepts and
+  facilities}, 1987. Définition de la délégation, de l'autorité et de la mise en
+  cache.
+
+\bibitem{rfc1035} IETF. \textbf{RFC 1035, Domain names, implementation and
+  specification}, 1987. Format des messages, transferts de zone et champs du
+  SOA.
+
+\bibitem{rfc2317} IETF. \textbf{RFC 2317, Classless IN-ADDR.ARPA delegation},
+  1998. Découpage inverse sans classe, examiné puis écarté à la
+  section~\ref{sec:nommage}.
+
+\bibitem{rfc6303} IETF. \textbf{RFC 6303, Locally served DNS zones}, 2011.
+  Fondement du comportement par défaut neutralisé par la directive
+  \opt{serve-rfc1918}.
+
+\bibitem{rfc6891} IETF. \textbf{RFC 6891, Extension mechanisms for DNS,
+  EDNS(0)}, 2013. Annonce de la taille de réponse UDP, paramétrée à 1\,232
+  octets.
+
+\bibitem{rfc7766} IETF. \textbf{RFC 7766, DNS transport over TCP}, 2016.
+  Justification de l'ouverture obligatoire du port 53 en TCP.
+
+\bibitem{rfc8945} IETF. \textbf{RFC 8945, Secret key transaction authentication
+  for DNS, TSIG}, 2020. Signature des transferts de zone entre ns1 et ns2.
+
+\bibitem{rfc2136} IETF. \textbf{RFC 2136, Dynamic updates in the domain name
+  system}, 1997. Mécanisme de l'alternative évaluée au
+  tableau~\ref{tab:arbitrage}.
+
+\bibitem{rfc4035} IETF. \textbf{RFC 4035, Protocol modifications for the DNS
+  security extensions}, 2005. Validation DNSSEC et traitement des branches non
+  signées.
+
+\bibitem{icann} ICANN. \textbf{Board resolution on the reservation of the
+  .internal top level domain for private use}, 2024. Fondement du choix de
+  suffixe interne.
+
+\bibitem{pdnsauth} PowerDNS. \textbf{Authoritative server documentation} :
+  settings, HTTP API et \opt{pdnsutil}. Documentation évolutive ; la version
+  installée doit être confirmée avant application.
+
+\bibitem{pdnsrec} PowerDNS. \textbf{Recursor documentation} : settings,
+  scripting Lua, \opt{gettag} et \opt{preresolve}. Documentation évolutive ; la
+  version installée doit être confirmée avant application.
+
+\bibitem{flagday} DNS Flag Day 2020. \textbf{Recommandation sur la taille des
+  messages DNS en UDP}. Origine de la valeur de 1\,232 octets retenue à
+  l'équation \eqref{eq:mtu}.
+
+\bibitem{xcpng} XCP-ng Project. \textbf{Networking et XCP-ng 8.3 LTS}. Version
+  cible du corpus, à confirmer sur les hôtes.
+
+\end{thebibliography}

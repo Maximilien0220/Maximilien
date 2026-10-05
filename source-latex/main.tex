@@ -1,0 +1,112 @@
+% ===========================================================================
+%  Projet GANDAL, equipe 20
+%  Tache T005 : mise en place du service DNS
+%  Auteur : FOMETHE SOMBANANG Maximilien
+%  Compilation : pdflatex main.tex  (deux passes pour la table des matieres)
+% ===========================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+\input{preambule}
+\input{figures}
+
+\begin{document}
+
+% ---------------------------------------------------------------- couverture
+\begin{titlepage}
+\thispagestyle{empty}
+\setlength{\parindent}{0pt}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[gdnavy] (current page.north west) rectangle
+       ($(current page.south west)+(11mm,0)$);
+  \fill[gdgold] ($(current page.north west)+(11mm,-62mm)$) rectangle
+       ++(3.2mm,-46mm);
+  \draw[gdrule,line width=0.8pt]
+       ($(current page.north east)+(-60mm,-20mm)$) --
+       ($(current page.north east)+(-16mm,-64mm)$) --
+       ($(current page.north east)+(-16mm,-20mm)$) -- cycle;
+  \draw[gdgold,line width=0.7pt]
+       ($(current page.north east)+(-49mm,-31mm)$) --
+       ($(current page.north east)+(-24mm,-56mm)$) --
+       ($(current page.north east)+(-24mm,-31mm)$);
+\end{tikzpicture}
+
+\vspace*{18mm}
+{\color{gdnavy}\bfseries\large Université de Yaoundé I\par}
+{\color{gdnavy}\bfseries\large École Nationale Supérieure Polytechnique de Yaoundé\par}
+\vspace{1.5mm}
+{\color{gdgrey}\normalsize Département de Génie Informatique\par}
+
+\vspace{40mm}
+
+{\scshape\bfseries\color{gdteal}\small
+ Dossier de réalisation GANDAL \quad\textbar\quad Tâche T005\par}
+\vspace{5mm}
+
+{\color{gdnavy}\bfseries\fontsize{30}{36}\selectfont
+ Mise en place\\[2mm] du service DNS\par}
+
+\vspace{6mm}
+{\color{gdgrey}\large\itshape
+ Conception détaillée, configurations et procédures\\
+ d'exploitation du socle de résolution de noms\par}
+
+\vspace{7mm}
+{\color{gdgold}\rule{58mm}{1.4pt}\par}
+
+\vspace{16mm}
+{\color{gdgrey}\small Présenté dans le cadre de\par}
+\vspace{1mm}
+{\color{gdnavy}\large Spécifications d'ingénierie datacenter\par}
+
+\vfill
+
+\noindent
+\begin{minipage}[t]{0.52\textwidth}
+  {\scriptsize\scshape\bfseries\color{gdteal} Réalisé par\par}
+  \vspace{1.5mm}
+  {\color{gdnavy}\large FOMETHE SOMBANANG Maximilien\par}
+  {\color{gdgrey}\small Équipe 20, projet GANDAL\par}
+\end{minipage}%
+\begin{minipage}[t]{0.48\textwidth}
+  {\scriptsize\scshape\bfseries\color{gdteal} Périmètre\par}
+  \vspace{1.5mm}
+  {\color{gdnavy}\large Cellule Réseaux et Sécurité\par}
+  {\color{gdgrey}\small Lot Services Network, tâche T005\par}
+\end{minipage}
+
+\vspace{7mm}
+{\color{gdrule}\rule{\textwidth}{0.6pt}\par}
+\vspace{2mm}
+\noindent
+{\color{gdgrey}\small Année universitaire 2025 / 2026 \hfill
+ Version 1.0 \quad\textbar\quad 5 octobre 2026\par}
+\end{titlepage}
+
+% --------------------------------------------------------- pieces liminaires
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\input{00-fiche}
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Table des matières}
+\renewcommand{\contentsname}{Table des matières}
+{\hypersetup{linkcolor=gdnavy}\tableofcontents}
+
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% ------------------------------------------------------------------ chapitres
+\input{01-objectifs}
+\input{02-conception}
+\input{03-isolation}
+\input{04-configurations}
+\input{05-cycle-de-vie}
+\input{06-recette}
+\input{07-limites}
+
+% ----------------------------------------------------------------- references
+\input{08-references}
+
+\end{document}

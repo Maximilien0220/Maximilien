@@ -1,0 +1,218 @@
+% ---------------------------------------------------------------------------
+%  Schemas TikZ du dossier T005
+%  Unite : le millimetre. La largeur utile du texte vaut 160 mm.
+% ---------------------------------------------------------------------------
+
+% Ligne secondaire d'un noeud : la fonte doit etre reappliquee ligne par ligne,
+% car l'alignement d'un noeud TikZ place chaque ligne dans son propre groupe.
+\newcommand{\fline}[1]{{\tiny\ttfamily #1}}
+
+% ------------------------------------------------------- figure : architecture
+\newcommand{\figArchitecture}{%
+\begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
+
+  % ---- panneau 1 : repartition physique
+  \node[titrepan] at (0,93) {Panneau 1 \quad Répartition des quatre instances
+                             sur les trois hôtes};
+
+  \foreach \x/\nom/\mgmt in {0/H1/10.30.0.11, 54/H2/10.30.0.12, 108/H3/10.30.0.13}{
+    \draw[hote] (\x,58) rectangle ++(50,30);
+    \node[font=\scriptsize\bfseries,text=gdnavy,anchor=north west] at (\x+2,87) {Hôte~\nom};
+    \node[font=\tiny\ttfamily,text=gdgrey,anchor=north east] at (\x+48,86.5) {\mgmt};
+  }
+
+  \node[blocteal,minimum width=45mm,minimum height=9mm,anchor=south west] at (2.5,71)
+    {\textbf{ns1} \,\ autoritatif primaire\\[-2pt]{\tiny\ttfamily 10.30.4.10}};
+  \node[blocteal,minimum width=45mm,minimum height=9mm,anchor=south west] at (2.5,60)
+    {\textbf{rec2} \,\ résolveur récursif\\[-2pt]{\tiny\ttfamily 10.30.4.13}};
+  \node[blocteal,minimum width=45mm,minimum height=9mm,anchor=south west] at (56.5,71)
+    {\textbf{rec1} \,\ résolveur récursif\\[-2pt]{\tiny\ttfamily 10.30.4.12}};
+  \node[blocteal,minimum width=45mm,minimum height=9mm,anchor=south west] at (110.5,71)
+    {\textbf{ns2} \,\ autoritatif secondaire\\[-2pt]{\tiny\ttfamily 10.30.4.11}};
+
+  \node[font=\tiny,text=gdgrey,anchor=north west,text width=158mm] at (0,56)
+    {Anti-affinité par rôle : les deux membres d'une même paire ne résident jamais
+     sur le même hôte, de sorte que toute perte d'un hôte laisse un serveur de
+     chaque rôle en service.};
+
+  \draw[gdrule,line width=0.4pt] (0,49) -- (158,49);
+
+  % ---- panneau 2 : chemins logiques
+  \node[titrepan] at (0,45) {Panneau 2 \quad Chemins de résolution};
+
+  % chemin direct interdit, place dans un couloir degage au-dessus des blocs
+  \node[etiqr,font=\tiny\bfseries] at (79,39.8)
+    {accès direct d'un VNet tenant aux serveurs autoritatifs : refusé au pare-feu};
+  \draw[draw=gdred,line width=0.65pt,dash pattern=on 2.4pt off 1.8pt]
+       (20,32) -- (20,36.4) -- (140,36.4) -- (140,32);
+  \draw[gdred,line width=0.9pt] (77.8,35.2) -- (80.2,37.6);
+  \draw[gdred,line width=0.9pt] (77.8,37.6) -- (80.2,35.2);
+
+  \node[bloc,minimum width=40mm,minimum height=16mm,anchor=south west] (clients) at (0,16)
+    {\textbf{Clients autorisés}\\[1pt]
+     \fline{VNets tenant 10.30.64.0/18}\\
+     \fline{gestion 10.30.0.0/24}\\
+     \fline{VPN admin 10.30.16.32/28}};
+  \node[blocteal,minimum width=40mm,minimum height=16mm,anchor=south west] (rec) at (60,16)
+    {\textbf{Résolveurs rec1 et rec2}\\[1pt]
+     \fline{10.30.4.12 et .13}\\
+     \fline{allow-from puis vue}\\
+     \fline{cache indexé par étiquette}};
+  \node[bloc,minimum width=40mm,minimum height=16mm,anchor=south west] (auth) at (120,16)
+    {\textbf{Autoritatifs ns1 et ns2}\\[1pt]
+     \fline{10.30.4.10 et .11}\\
+     \fline{zone gandal.internal}\\
+     \fline{et 30.10.in-addr.arpa}};
+
+  \draw[fl] (clients) -- node[etiqt,above=1pt,font=\tiny\ttfamily]{UDP/TCP 53} (rec);
+  \draw[flnavy] (rec) -- node[etiq,above=1pt,font=\tiny\ttfamily]{forward-zones} (auth);
+
+  \node[blocgris,minimum width=40mm,minimum height=12mm,anchor=south west] (racine) at (60,0)
+    {\textbf{Racine publique}\\[1pt]
+     \fline{via PF-WAN puis R1}\\
+     \fline{dnssec=validate}};
+  \node[blocgold,minimum width=40mm,minimum height=12mm,anchor=south west] (repl) at (120,0)
+    {\textbf{Réplication}\\[1pt]
+     \fline{NOTIFY puis AXFR ou IXFR}\\
+     \fline{signés TSIG, ns1 vers ns2}};
+
+  \draw[flgris] (rec) -- (racine);
+  \draw[flgold] (auth) -- (repl);
+
+  \node[font=\tiny,text=gdgrey,anchor=north west,text width=158mm] at (0,-4)
+    {La carte réseau unique par hôte et le commutateur SW1 unique restent des
+     dépendances communes. La redondance couvre la perte d'une machine virtuelle
+     ou d'un hôte, et non celle de SW1 ou du routeur R1.};
+\end{tikzpicture}}
+
+% -------------------------------------------------------------- figure : zones
+\newcommand{\figZones}{%
+\begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
+
+  \node[titrepan] at (0,62) {Espace direct};
+  \node[titrepan] at (84,62) {Espace inverse};
+
+  \node[bloc,minimum width=74mm,minimum height=12mm,anchor=north west] (gi) at (0,58)
+    {\textbf{gandal.internal}\\[1pt]
+     \fline{SOA, NS ns1 et ns2, adresses des 4 serveurs}\\
+     \fline{délégations NS vers les zones filles}};
+  \node[blocteal,minimum width=66mm,minimum height=10mm,anchor=north west] (gia) at (8,41)
+    {\textbf{infra.gandal.internal}\\[1pt]
+     \fline{hôtes, XO, bastion, pfSense, services}};
+  \node[blocteal,minimum width=66mm,minimum height=10mm,anchor=north west] (gib) at (8,27)
+    {\textbf{tenant-001 à tenant-050}\\[1pt]
+     \fline{50 zones, une par tenant}};
+  \draw[gdgrey,line width=0.4pt] (3.5,46) |- (gia.west);
+  \draw[gdgrey,line width=0.4pt] (3.5,46) |- (gib.west);
+
+  \node[bloc,minimum width=74mm,minimum height=12mm,anchor=north west] (ri) at (84,58)
+    {\textbf{30.10.in-addr.arpa}\\[1pt]
+     \fline{le /16 appartient entièrement au projet}\\
+     \fline{aucun découpage RFC 2317 nécessaire}};
+  \node[blocteal,minimum width=66mm,minimum height=10mm,anchor=north west] (ria) at (92,41)
+    {\textbf{11 zones d'infrastructure}\\[1pt]
+     \fline{octets 0, 1, 2, 4, 5, 6, 7, 8, 10, 16 et 17}};
+  \node[blocteal,minimum width=66mm,minimum height=10mm,anchor=north west] (rib) at (92,27)
+    {\textbf{50 zones tenant}\\[1pt]
+     \fline{octets 64 à 113, une zone par /24}};
+  \draw[gdgrey,line width=0.4pt] (87.5,46) |- (ria.west);
+  \draw[gdgrey,line width=0.4pt] (87.5,46) |- (rib.west);
+
+  \node[bande,minimum width=155mm,anchor=north west,text width=150mm,align=left] at (0,18)
+    {{\tiny\bfseries\scshape\color{gdteal} Correspondance entre un tenant, sa zone
+      directe et sa zone inverse}\\[3pt]
+     $\mathcal{D}(n)=\texttt{tenant-0}n\texttt{.gandal.internal}$ \quad et \quad
+     $\mathcal{R}(n)=(63+n)\texttt{.30.10.in-addr.arpa}$, \quad
+     pour $1\leqslant n\leqslant 50$\\[3pt]
+     {\tiny Exemple pour $n=7$ : \texttt{tenant-007.gandal.internal} et
+      \texttt{70.30.10.in-addr.arpa}, préfixe \texttt{10.30.70.0/24}.}};
+\end{tikzpicture}}
+
+% ----------------------------------------------------------- figure : sequence
+\newcommand{\figSequence}{%
+\begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
+
+  \foreach \x/\y/\n/\ti/\la/\lb in {%
+     0/44/1/{Bail attribué}/{Kea délivre 10.30.70.37}/{à la VIF de la machine},
+    56/44/2/{Publication du A}/{agent vers l'API de ns1}/{PATCH rrset, type REPLACE},
+   112/44/3/{Publication du PTR}/{zone 70.30.10.in-addr.arpa}/{même operation\_id},
+     0/20/4/{Réplication}/{NOTIFY de ns1 vers ns2}/{AXFR ou IXFR signé TSIG},
+    56/20/5/{Contrôle}/{requête sur ns1, ns2,}/{rec1 et rec2 ; concordance},
+   112/20/6/{État READY}/{exposé au Backend}/{operation\_id conservé}}{%
+    \draw[blocteal,fill=white] (\x,\y) rectangle ++(46,17);
+    \fill[gdteal] (\x,\y+13) rectangle ++(46,4);
+    \node[font=\tiny\bfseries,text=white,anchor=west]  at (\x+1.6,\y+15) {\n};
+    \node[font=\tiny\bfseries,text=white]              at (\x+25,\y+15) {\ti};
+    \node[font=\tiny\ttfamily,text=gdgrey]             at (\x+23,\y+8.5) {\la};
+    \node[font=\tiny\ttfamily,text=gdgrey]             at (\x+23,\y+4.5) {\lb};
+  }
+
+  \draw[flnavy] (46,50) -- (56,50);
+  \draw[flnavy] (102,50) -- (112,50);
+  \draw[flnavy] (46,26) -- (56,26);
+  \draw[flnavy] (102,26) -- (112,26);
+  \draw[flnavy] (135,44) -- (135,40) -- (23,40) -- (23,37);
+
+  \draw[flrouge] (79,20) -- (79,15);
+  \draw[blocrouge,fill=gdwarn] (14,4) rectangle ++(130,11);
+  \node[font=\tiny\bfseries,text=gdred] at (79,11.5)
+    {Échec de publication ou de contrôle : l'opération reste observable en état dégradé,};
+  \node[font=\tiny,text=gdred] at (79,7)
+    {l'adresse n'est pas rendue au pool et une alerte est levée.};
+\end{tikzpicture}}
+
+% ------------------------------------------------------------- figure : chemin
+\newcommand{\figChemin}{%
+\begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
+
+  \node[bloc,minimum width=34mm,minimum height=13mm,anchor=south west] (vm) at (0,64)
+    {\textbf{VM du tenant 007}\\[1pt]
+     \fline{10.30.70.37}\\
+     \fline{resolv.conf : .12 puis .13}};
+  \node[bloc,minimum width=34mm,minimum height=13mm,anchor=south west] (gw) at (41,64)
+    {\textbf{Passerelle .1}\\[1pt]
+     \fline{paire PF-USER}\\
+     \fline{VIP 10.30.70.1}};
+  \node[blocrouge,minimum width=34mm,minimum height=13mm,anchor=south west] (pf) at (82,64)
+    {\textbf{Filtre pfSense}\\[1pt]
+     \fline{53 vers .12 et .13}\\
+     \fline{.10 et .11 refusés}};
+  \node[blocteal,minimum width=34mm,minimum height=13mm,anchor=south west] (re) at (123,64)
+    {\textbf{rec1 ou rec2}\\[1pt]
+     \fline{allow-from vérifié}\\
+     \fline{gettag() calcule la vue}};
+  \draw[fl] (vm) -- (gw);   \draw[fl] (gw) -- (pf);   \draw[fl] (pf) -- (re);
+
+  \node[bande,minimum width=155mm,anchor=north west,text width=150mm,align=left] at (0,58)
+    {{\tiny\bfseries\scshape\color{gdteal} preresolve() : politique de sélection
+      des zones}\\[3pt]
+     {\tiny\ttfamily nom sous tenant-007.gandal.internal ou 70.30.10.in-addr.arpa
+      \ :\ résolution autorisée}\\[1.5pt]
+     {\tiny\ttfamily\color{gdred} nom sous infra.gandal.internal ou sous un autre
+      tenant \ :\ REFUSED, sans divulgation}\\[1.5pt]
+     {\tiny\ttfamily\color{gdgrey} nom public \ :\ récursion ordinaire, quelle que
+      soit la vue}};
+  \draw[fl] (140,64) -- (140,58);
+
+  \node[bloc,minimum width=46mm,minimum height=13mm,anchor=south west] (na) at (0,14)
+    {\textbf{Autoritatifs ns1 et ns2}\\[1pt]
+     \fline{10.30.4.10 et .11}\\
+     \fline{atteints par forward-zones}};
+  \node[blocgris,minimum width=46mm,minimum height=13mm,anchor=south west] (rp) at (56,14)
+    {\textbf{Racine publique}\\[1pt]
+     \fline{via PF-WAN puis R1}\\
+     \fline{dnssec=validate}};
+  \node[blocgold,minimum width=46mm,minimum height=13mm,anchor=south west] (jo) at (112,14)
+    {\textbf{Journal dnstap}\\[1pt]
+     \fline{horodatage en UTC}\\
+     \fline{lu en pull par Monitoring}};
+  \draw[flnavy] (23,34) -- (23,27);
+  \draw[flgris] (79,34) -- (79,27);
+  \draw[flgold] (135,34) -- (135,27);
+
+  \node[font=\tiny,text=gdgrey,anchor=north west,text width=158mm] at (0,12)
+    {\textbf{\color{gdteal}L'étiquette de vue est calculée avant toute consultation
+     de cache et entre dans la clé du cache paquet : deux vues distinctes ne peuvent
+     jamais partager une réponse.} Un contrôle placé dans \texttt{preresolve()} seul
+     n'offrirait pas cette garantie.};
+\end{tikzpicture}}

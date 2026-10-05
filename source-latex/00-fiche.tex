@@ -1,0 +1,116 @@
+% =========================== Fiche de tache, resume et abreviations =========
+\chapter*{Fiche de tâche et résumé}
+\markboth{Fiche de tâche et résumé}{}
+\addcontentsline{toc}{chapter}{Fiche de tâche et résumé}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}R{0.26}R{0.74}@{}}
+\toprule
+\textbf{Rubrique} & \textbf{Contenu}\\
+\midrule
+Identifiant & T005\\
+Intitulé & Mettre en place le DNS\\
+Responsable & FOMETHE SOMBANANG Maximilien\\
+Pondération et priorité & 8 sur 10, priorité haute\\
+Cellule & Réseaux et Sécurité, lot Services Network\\
+Prérequis consommés & T001, plan d'adressage et modèle IPAM figés par le
+  document 02 ; T003, réseau de management\\
+Tâches coordonnées & T004 DHCP haute disponibilité, T006 synchronisation
+  temporelle, T007 agent réseau et API de provisionnement\\
+Livrable & Le présent dossier : conception, configurations, procédures et
+  critères de recette du service DNS\\
+Hors périmètre & T009, tests, validation, reprise et documentation, qui
+  exploite les critères définis au chapitre~\ref{ch:recette} une fois les
+  autres lots disponibles\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Résumé}
+
+Ce dossier définit et paramètre le service de résolution de noms de GANDAL. Il
+sépare strictement le rôle autoritatif du rôle récursif, retient PowerDNS
+conformément à l'arbitrage du document 03, et construit l'espace de nommage
+interne à partir du plan d'adressage arrêté par le document 02. Il traite la
+confidentialité des noms entre domaines par une politique de sélection des
+zones indexée sur l'adresse source, doublée d'un filtrage réseau qui interdit
+aux VNets tenant d'atteindre les serveurs autoritatifs.
+
+Le cycle de vie des enregistrements est confié à un propriétaire d'écriture
+unique, l'agent réseau, au moyen de l'API autoritative exposée derrière une
+terminaison TLS. Les opérations sont rejouables sans effet de bord, et une
+panne de publication laisse l'opération dans un état dégradé observable sans
+libérer une adresse encore utilisée.
+
+Les configurations proposées sont complètes et cohérentes avec les contraintes
+matérielles du projet : une carte réseau par hôte, un commutateur unique, une
+MTU utile de 1\,450 octets imposée par l'encapsulation VXLAN. Conformément
+à la règle du corpus, aucun déploiement ni aucun essai n'est présenté comme
+effectué : les contrôles de recette sont énoncés avec leur commande, leur
+résultat attendu et le statut \statut{non exécuté}.
+
+\begin{encadre}
+\titreencadre{Mots-clés}
+GANDAL ; DNS ; PowerDNS ; zone autoritative ; résolveur récursif ; espace de
+nommage interne ; isolation multi-tenant ; TSIG ; DNSSEC ; publication
+idempotente ; mode dégradé.
+\end{encadre}
+
+\section*{Abréviations propres au dossier}
+
+Le glossaire général du corpus reste applicable. Les termes ci-dessous sont
+ceux que ce dossier emploie de manière spécifique.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}R{0.17}R{0.83}@{}}
+\toprule
+\textbf{Terme} & \textbf{Définition retenue}\\
+\midrule
+Autoritatif & Serveur qui détient les données d'une zone et répond avec
+  l'indicateur \opt{AA}. Il ne résout pas les noms des autres zones.\\
+Récursif & Résolveur qui interroge la chaîne des serveurs autoritatifs pour le
+  compte d'un client et met les réponses en cache.\\
+AXFR, IXFR & Transfert complet ou incrémental d'une zone entre serveurs.\\
+TSIG & Signature symétrique des messages DNS, définie par le RFC 8945,
+  employée ici pour les transferts de zone.\\
+NTA & \textit{Negative Trust Anchor} : exception locale de validation DNSSEC
+  sur une branche de l'arbre.\\
+RRset & Ensemble des enregistrements partageant le même nom, la même classe et
+  le même type ; unité de modification de l'API.\\
+PTR & Enregistrement de résolution inverse, d'une adresse vers un nom.\\
+Vue & Ensemble de zones qu'une catégorie de clients est autorisée à résoudre ;
+  déterminée ici par l'adresse source.\\
+dnstap & Format et transport de journalisation structurée des échanges DNS.\\
+EDNS & Extension du protocole DNS permettant notamment d'annoncer une taille de
+  réponse UDP supérieure à 512 octets.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Notations}
+
+Le dossier emploie les notations suivantes, dont les définitions complètes
+figurent aux sections~\ref{sec:nommage} et~\ref{sec:dimensionnement}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}R{0.13}R{0.87}@{}}
+\toprule
+\textbf{Symbole} & \textbf{Signification}\\
+\midrule
+$n$ & Numéro d'un tenant, $1\leqslant n\leqslant T$\\
+$T$ & Nombre de tenants du périmètre minimal, $T=50$\\
+$\mathcal{P}(n)$ & Préfixe IPv4 attribué au tenant $n$\\
+$\mathcal{D}(n)$, $\mathcal{R}(n)$ & Zone directe et zone inverse du tenant $n$\\
+$\tau(a)$ & Étiquette de vue associée à l'adresse source $a$\\
+$o_3(a)$ & Troisième octet de l'adresse $a$\\
+$N_Z$, $N_R$ & Nombre de zones et nombre d'enregistrements publiés\\
+$B$, $Q$ & Durée du bail DHCP et durée de quarantaine d'une adresse\\
+\bottomrule
+\end{tabular}
+\end{table}

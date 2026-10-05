@@ -1,0 +1,232 @@
+% ================== Chapitre 3 : isolation et confidentialite ===============
+\chapter{Isolation et confidentialité des noms}
+\label{ch:isolation}
+
+\section{Expression du besoin et scénarios à empêcher}
+
+L'exigence \exig{net-fr-008} porte sur la confidentialité des noms entre
+domaines. Le document 03 la précise sans ambiguïté : le mécanisme de résolution
+doit empêcher la lecture d'une zone d'infrastructure ou d'un autre tenant par
+les clients non autorisés, et cacher un enregistrement dans le portail ne suffit
+pas. Le test \opt{S04} formule la vérification attendue : depuis une machine du
+VNet USER, une requête vers la zone d'infrastructure et vers la zone d'un tenant
+voisin doit se solder par un refus ou une absence d'information.
+
+Trois scénarios doivent être couverts, et chacun appelle une contre-mesure
+distincte.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Scénarios de divulgation et contre-mesures}\label{tab:scenarios}
+\begin{tabular}{@{}R{0.30}R{0.33}R{0.37}@{}}
+\toprule
+\textbf{Scénario} & \textbf{Ce qui serait divulgué} &
+\textbf{Contre-mesure retenue}\\
+\midrule
+Interrogation directe d'un serveur autoritatif par une machine tenant &
+  Le serveur autoritatif répondrait pour toute zone hébergée, y compris celles
+  des autres tenants. &
+  Filtrage réseau : les adresses \ip{10.30.4.10} et \ip{10.30.4.11} ne sont pas
+  joignables depuis un VNet tenant (section~\ref{sec:flux}).\\
+Transfert de zone demandé par un client quelconque &
+  Un transfert divulgue l'intégralité d'une zone en une requête. &
+  Transferts restreints à ns2 par adresse et signés par une clé TSIG
+  (section~\ref{sec:zones}).\\
+Requête vers une zone étrangère au travers du résolveur partagé &
+  Le résolveur résout toutes les zones internes pour tous ses clients. &
+  Politique de sélection des zones indexée sur l'adresse source
+  (section~\ref{sec:vue}).\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Une énumération par requêtes successives reste théoriquement possible à
+l'intérieur de la vue d'un tenant, c'est-à-dire sur ses propres noms. Ce résidu
+est accepté : il ne franchit aucune frontière de tenant.
+
+\section{Politique de sélection des zones par adresse source}
+\label{sec:vue}
+
+Les deux options ouvertes par le document 03 sont de séparer physiquement les
+points de résolution par tenant, ou d'appliquer une politique démontrée de
+sélection des zones. La première option supposerait cinquante paires de
+résolveurs, ce que le matériel disponible exclut. La seconde est donc retenue.
+
+Son principe est direct. La relation \eqref{eq:prefixe} associe le tenant $n$ au
+préfixe \ip{10.30.(63+n).0/24}. L'adresse source d'une requête détermine donc
+sans ambiguïté le tenant émetteur, et par conséquent les deux seules zones
+internes qu'il est autorisé à résoudre. En notant $\mathcal{A}$ la réunion des
+préfixes d'administration et $o_3(a)$ le troisième octet de l'adresse $a$,
+l'étiquette de vue s'écrit
+\begin{equation}
+  \tau(a) =
+  \begin{cases}
+    1 & \text{si } a \in \mathcal{A},\\[3pt]
+    1000 + \bigl(o_3(a) - 63\bigr)
+      & \text{si } a \in \texttt{10.30.64.0/18}
+        \text{ et } 64 \leqslant o_3(a) \leqslant 113,\\[3pt]
+    999 & \text{sinon,}
+  \end{cases}
+  \label{eq:tau}
+\end{equation}
+et l'ensemble des zones internes résolubles par un client d'étiquette
+$\tau$ vaut
+\begin{equation}
+  \mathcal{Z}(\tau) =
+  \begin{cases}
+    \text{toutes les zones internes} & \text{si } \tau = 1,\\[3pt]
+    \bigl\{\, \mathcal{D}(\tau-1000),\ \mathcal{R}(\tau-1000) \,\bigr\}
+      & \text{si } \tau > 1000,\\[3pt]
+    \varnothing & \text{si } \tau = 999 .
+  \end{cases}
+  \label{eq:zones}
+\end{equation}
+
+Toute demande portant sur l'espace interne et sortant de $\mathcal{Z}(\tau)$
+reçoit un code \opt{REFUSED}, qui ne révèle pas l'existence du nom demandé,
+contrairement à une réponse \opt{NXDOMAIN}.
+
+\begin{encadredecision}
+\titreencadredec{Point de conception critique : où placer le contrôle}
+Une vérification placée dans le seul point d'entrée de résolution serait
+insuffisante. Le résolveur consulte son cache paquet avant d'engager la
+résolution : une réponse construite pour un tenant pourrait être restituée telle
+quelle à un autre, et la politique serait contournée par le cache lui-même.
+
+\smallskip
+La fonction \opt{gettag()} est évaluée avant toute consultation de cache et sa
+valeur de retour entre dans la clé du cache paquet. Le contrôle est donc
+construit en deux temps : \opt{gettag()} calcule l'étiquette $\tau(a)$ de
+l'équation \eqref{eq:tau}, puis \opt{preresolve()} applique la règle
+\eqref{eq:zones} en s'appuyant sur cette étiquette. Deux vues distinctes ne
+peuvent alors jamais partager une entrée de cache.
+\end{encadredecision}
+
+\begin{figure}[H]
+\centering
+\figChemin
+\caption{Chemin d'une requête issue d'une machine tenant et points
+  d'application de la politique}
+\label{fig:chemin}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Vues définies par la politique de sélection des zones}\label{tab:vues}
+\begin{tabular}{@{}C{0.12}R{0.41}R{0.47}@{}}
+\toprule
+\textbf{$\tau$} & \textbf{Adresses source} & \textbf{Portée de résolution}\\
+\midrule
+1 & Plan de gestion \ip{10.30.0.0/24}, VNet Services \ip{10.30.4.0/24},
+  Monitoring \ip{10.30.5.0/24}, pool VPN administrateur \ip{10.30.16.32/28} &
+  Vue administration : résolution de l'ensemble de l'espace interne et de
+  l'espace public.\\
+$1000+n$ & Préfixe du tenant $n$, soit \ip{10.30.(63+n).0/24} &
+  Zone directe $\mathcal{D}(n)$, zone inverse $\mathcal{R}(n)$, et espace
+  public.\\
+999 & Toute autre source acceptée par \opt{allow-from}, notamment le pool VPN
+  utilisateur \ip{10.30.16.16/28} &
+  Espace public uniquement ; tout nom interne reçoit \opt{REFUSED}.\\
+aucune & Source hors \opt{allow-from} &
+  La requête n'est pas traitée par le résolveur.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Filtrage réseau et matrice de flux}
+\label{sec:flux}
+
+La politique applicative ne remplace pas le filtrage. Les règles suivantes
+complètent les politiques de référence du document 02 et sont appliquées sur les
+passerelles pfSense des VNets concernés, conformément aux interfaces IF-INT-05
+et IF-INT-07.
+
+\begin{longtable}{@{}R{0.21}R{0.17}R{0.13}R{0.16}R{0.33}@{}}
+\caption{Matrice de flux du service DNS}\label{tab:matrice}\\
+\toprule
+\textbf{Source} & \textbf{Destination} & \textbf{Service} &
+\textbf{Décision} & \textbf{Motif}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Source} & \textbf{Destination} & \textbf{Service} &
+\textbf{Décision} & \textbf{Motif}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+VNet tenant \ip{10.30.(63+n).0/24} & \ip{10.30.4.12}, \ip{10.30.4.13} &
+  UDP et TCP 53 & Autoriser & Seul point de résolution offert aux tenants\\
+VNet tenant & \ip{10.30.4.10}, \ip{10.30.4.11} & tout &
+  Refuser et journaliser & Les autoritatifs ne sont pas exposés aux tenants\\
+VNet tenant & \ip{10.30.0.0/24} & tout & Refuser &
+  Règle existante du document 02, rappelée ici\\
+\ip{10.30.4.12}, \ip{10.30.4.13} & \ip{10.30.4.10}, \ip{10.30.4.11} &
+  UDP et TCP 53 & Autoriser & Redirection de zone interne\\
+\ip{10.30.4.12}, \ip{10.30.4.13} & Internet & UDP et TCP 53 &
+  Autoriser via PF-WAN & Récursion sur l'espace public, journalisée\\
+\ip{10.30.4.11} (ns2) & \ip{10.30.4.10} (ns1) & TCP 53 & Autoriser &
+  Transfert de zone signé TSIG\\
+\ip{10.30.4.10} (ns1) & \ip{10.30.4.11} (ns2) & UDP 53 & Autoriser &
+  Message NOTIFY\\
+\ip{10.30.4.41} (agent) & \ip{10.30.4.10} & TCP 8443 & Autoriser &
+  API autoritative derrière terminaison TLS\\
+\ip{10.30.4.41} (agent) & ns1, ns2, rec1, rec2 & UDP et TCP 53 & Autoriser &
+  Contrôle de publication sur les quatre instances\\
+\ip{10.30.0.0/24}, \ip{10.30.16.32/28} & \ip{10.30.4.12}, \ip{10.30.4.13} &
+  UDP et TCP 53 & Autoriser & Vue administration\\
+\ip{10.30.16.16/28} (VPN utilisateur) & \ip{10.30.4.12}, \ip{10.30.4.13} &
+  UDP et TCP 53 & Autoriser &
+  Admis par \opt{allow-from}, mais limité à l'espace public par la vue 999
+  (section~\ref{sec:vpn})\\
+\ip{10.30.5.10} (Monitoring) & ns1, ns2, rec1, rec2 & TCP 8443 & Autoriser &
+  Lecture des métriques, initiée par Monitoring\\
+ns1, ns2, rec1, rec2 & \ip{10.30.5.0/24} & tout & Refuser &
+  Aucune initiation vers Monitoring, conformément à IF-NS-08\\
+Toute autre source & ns1, ns2, rec1, rec2 & tout & Refuser &
+  Refus par défaut\\
+\end{longtable}
+
+Deux points méritent attention. Le refus du trafic des tenants vers les
+autoritatifs doit être journalisé : une hausse de ce compteur signale soit une
+erreur de distribution des résolveurs, soit une tentative délibérée. Par
+ailleurs, le port 53 doit être ouvert en TCP autant qu'en UDP, faute de quoi
+toute réponse tronquée deviendrait irrécupérable, avec un symptôme limité à
+certaines requêtes seulement.
+
+\section{Cas particulier des profils VPN}
+\label{sec:vpn}
+
+L'exigence \exig{net-fr-017} demande que le DNS soit accessible selon le profil
+VPN. Le plan d'adressage distingue trois pools : administrateur en
+\ip{10.30.16.32/28}, utilisateur en \ip{10.30.16.16/28} et site à site en
+\ip{10.30.16.48/28}, les deux derniers étant classés en extension.
+
+Le pool administrateur ne pose pas de difficulté : il est traité comme le plan
+de gestion et reçoit la vue administration, sous réserve de l'autorisation
+délivrée par IAM au moment de l'ouverture de session.
+
+Le pool utilisateur pose en revanche un problème de conception qu'il faut
+énoncer plutôt que masquer. Une politique fondée sur l'adresse source ne peut
+pas distinguer deux utilisateurs de tenants différents qui reçoivent leur
+adresse d'un même pool partagé de quatorze adresses. Trois réponses sont
+possibles.
+
+\begin{enumerate}
+  \item Attribuer une sous-plage distincte par tenant, ce que la taille du pool
+    actuel ne permet pas pour cinquante tenants.
+  \item Faire porter l'identité du tenant par le concentrateur VPN, qui
+    attribuerait une adresse stable par session et transmettrait la
+    correspondance au résolveur, au titre de l'interface IF-EXT-07.
+  \item Refuser toute résolution interne au pool utilisateur et médier les accès
+    par le Backend, conformément à IF-EXT-06.
+\end{enumerate}
+
+La troisième réponse est retenue pour le périmètre minimal, parce qu'elle est la
+seule applicable sans donnée supplémentaire et parce qu'elle est cohérente avec
+le statut d'extension du pool utilisateur. L'étiquette $\tau = 999$ de
+l'équation \eqref{eq:tau} matérialise ce refus. La deuxième réponse constitue
+l'évolution naturelle dès que la correspondance session vers tenant sera
+fournie.

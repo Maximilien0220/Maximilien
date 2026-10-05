@@ -1,0 +1,222 @@
+% ---------------------------------------------------------------------------
+%  Preambule : typographie Latin Modern, mise en page et environnements
+%  Projet GANDAL, tache T005
+% ---------------------------------------------------------------------------
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}          % Latin Modern : Computer Modern au format moderne
+\usepackage[french]{babel}
+% babel-french emploie par defaut un tiret long comme puce de liste :
+% on retablit les labels standard, le tiret cadratin etant proscrit.
+\frenchsetup{StandardLists=true}
+% thebibliography compose son propre titre de chapitre : on le renomme
+% plutot que d'en ajouter un second.
+\addto\captionsfrench{\renewcommand{\bibname}{Références}}
+\usepackage{microtype}        % protrusion et expansion : gris typographique regulier
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+
+\usepackage[a4paper,top=27mm,bottom=25mm,left=26mm,right=24mm,
+            headheight=14pt,headsep=10mm,footskip=13mm]{geometry}
+
+\usepackage{xcolor}
+\definecolor{gdnavy}{HTML}{1B3A57}
+\definecolor{gdteal}{HTML}{146B6B}
+\definecolor{gdgold}{HTML}{B08432}
+\definecolor{gdgrey}{HTML}{5C6670}
+\definecolor{gdrule}{HTML}{C9CDD2}
+\definecolor{gdlight}{HTML}{F2F1EC}
+\definecolor{gdcode}{HTML}{F5F6F7}
+\definecolor{gdbox}{HTML}{EDF3F3}
+\definecolor{gdwarn}{HTML}{FAF5EA}
+\definecolor{gdred}{HTML}{A33A3A}
+
+% --------------------------------------------------------------- sectionnement
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\LARGE\bfseries\color{gdnavy}}
+  {\normalsize\normalfont\scshape\color{gdteal}\chaptertitlename~\thechapter}
+  {6pt}
+  {\LARGE}
+  [{\vspace{4pt}\color{gdgold}\titlerule[1.1pt]}]
+\titlespacing*{\chapter}{0pt}{-16pt}{24pt}
+
+\titleformat{\section}
+  {\normalfont\large\bfseries\color{gdnavy}}{\thesection}{0.8em}{}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries\color{gdteal}}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}[runin]
+  {\normalfont\normalsize\bfseries}{}{0pt}{}[.\,]
+\titlespacing*{\section}{0pt}{16pt plus 3pt minus 2pt}{7pt}
+\titlespacing*{\subsection}{0pt}{12pt plus 2pt minus 2pt}{5pt}
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+
+% ------------------------------------------------------------- en-tetes et pieds
+\usepackage{fancyhdr}
+\fancypagestyle{gandal}{%
+  \fancyhf{}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+  \renewcommand{\footrulewidth}{0.4pt}%
+  \fancyhead[L]{\footnotesize\color{gdgrey}\leftmark}%
+  \fancyfoot[L]{\scriptsize\color{gdgrey}\textsc{Projet GANDAL \quad Cellule
+                Réseaux et Sécurité \quad Tâche T005}}%
+  \fancyfoot[R]{\small\color{gdnavy}\textbf{\thepage}}%
+}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0.4pt}%
+  \fancyfoot[L]{\scriptsize\color{gdgrey}\textsc{Projet GANDAL \quad Cellule
+                Réseaux et Sécurité \quad Tâche T005}}%
+  \fancyfoot[R]{\small\color{gdnavy}\textbf{\thepage}}%
+}
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter\quad #1}{}}
+\pagestyle{gandal}
+
+% ------------------------------------------------------------------- tableaux
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{colortbl}
+\renewcommand{\arraystretch}{1.22}
+\setlength{\tabcolsep}{5pt}
+
+% Colonnes de largeur fractionnaire : la somme des fractions vaut 1
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{\dimexpr#1\textwidth-2\tabcolsep-0.4pt}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{\dimexpr#1\textwidth-2\tabcolsep-0.4pt}}
+
+\newcommand{\thead}[1]{\textbf{\color{white}#1}}
+\newcommand{\entete}{\rowcolor{gdnavy}}
+
+% --------------------------------------------------------------------- legendes
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,labelsep=period,width=0.94\textwidth}
+\captionsetup[table]{skip=5pt}
+\captionsetup[figure]{skip=9pt}
+
+% ----------------------------------------------------------------------- listes
+\usepackage{enumitem}
+\setlist[itemize]{label=\textbullet,leftmargin=1.35em,topsep=4pt,
+                  itemsep=2.5pt,parsep=0pt}
+\setlist[itemize,2]{label=\textendash,leftmargin=1.2em}
+\setlist[enumerate]{leftmargin=1.75em,topsep=4pt,itemsep=2.5pt,parsep=0pt}
+
+% ------------------------------------------------------------------- listings
+\usepackage{listings}
+\lstdefinestyle{gandal}{%
+  basicstyle=\ttfamily\scriptsize,
+  commentstyle=\color{gdgrey}\itshape,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  upquote=true,
+  breaklines=true,
+  breakatwhitespace=false,
+  breakindent=1.6em,
+  postbreak=\mbox{\textcolor{gdteal}{$\hookrightarrow$}\space},
+  frame=leftline,
+  framesep=7pt,
+  framerule=1.1pt,
+  rulecolor=\color{gdteal},
+  backgroundcolor=\color{gdcode},
+  xleftmargin=10pt,
+  xrightmargin=1pt,
+  aboveskip=10pt,
+  belowskip=4pt,
+  literate=%
+    {é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {ë}{{\"e}}1
+    {à}{{\`a}}1 {â}{{\^a}}1 {ù}{{\`u}}1 {û}{{\^u}}1
+    {î}{{\^i}}1 {ï}{{\"i}}1 {ô}{{\^o}}1 {ç}{{\c c}}1
+    {É}{{\'E}}1 {È}{{\`E}}1 {À}{{\`A}}1 {Ç}{{\c C}}1
+}
+\lstset{style=gandal}
+\lstdefinelanguage{pdnsconf}{%
+  morecomment=[l]{\#},
+  sensitive=true,
+}
+\lstdefinelanguage{luapdns}{%
+  morecomment=[l]{--},
+  morestring=[b]",
+  morekeywords={local,function,end,if,then,else,return,nil,for,in,do,and,or,not},
+  sensitive=true,
+}
+\renewcommand{\lstlistingname}{Listing}
+
+% ------------------------------------------------------------------- encadres
+\usepackage[most]{tcolorbox}
+\newtcolorbox{encadre}[1][]{%
+  enhanced, breakable, boxrule=0pt, frame hidden,
+  borderline west={2.4pt}{0pt}{gdteal},
+  colback=gdbox, sharp corners, left=9pt, right=9pt, top=7pt, bottom=7pt,
+  fontupper=\small, #1}
+\newtcolorbox{encadredecision}[1][]{%
+  enhanced, breakable, boxrule=0pt, frame hidden,
+  borderline west={2.4pt}{0pt}{gdgold},
+  colback=gdwarn, sharp corners, left=9pt, right=9pt, top=7pt, bottom=7pt,
+  fontupper=\small, #1}
+\newcommand{\titreencadre}[1]{%
+  {\footnotesize\bfseries\scshape\color{gdteal}#1\par}\vspace{2pt}}
+\newcommand{\titreencadredec}[1]{%
+  {\footnotesize\bfseries\scshape\color{gdgold}#1\par}\vspace{2pt}}
+
+% --------------------------------------------------------------------- figures
+\usepackage{tikz}
+\usetikzlibrary{babel,positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric,
+                shadows.blur,decorations.pathreplacing}
+\usepackage{float}
+
+\tikzset{
+  bloc/.style   ={draw=gdnavy, line width=0.6pt, rounded corners=1.5pt,
+                  align=center, inner sep=4pt, font=\scriptsize, fill=white},
+  blocteal/.style={bloc, draw=gdteal},
+  blocgold/.style={bloc, draw=gdgold},
+  blocrouge/.style={bloc, draw=gdred},
+  blocgris/.style={bloc, draw=gdgrey},
+  hote/.style   ={draw=gdnavy, line width=0.7pt, rounded corners=2pt,
+                  fill=gdlight, inner sep=5pt},
+  bande/.style  ={draw=gdteal, line width=0.6pt, dash pattern=on 2pt off 2pt,
+                  fill=gdbox, rounded corners=2pt, inner sep=6pt},
+  fl/.style     ={-{Stealth[length=4pt,width=3pt]}, line width=0.65pt,
+                  draw=gdteal},
+  flnavy/.style ={fl, draw=gdnavy},
+  flgris/.style ={fl, draw=gdgrey, dash pattern=on 2pt off 1.6pt},
+  flgold/.style ={fl, draw=gdgold},
+  flrouge/.style={fl, draw=gdred, dash pattern=on 2.4pt off 1.8pt},
+  etiq/.style   ={font=\tiny, inner sep=1.5pt, text=gdnavy},
+  etiqt/.style  ={etiq, text=gdteal},
+  etiqr/.style  ={etiq, text=gdred},
+  etiqg/.style  ={etiq, text=gdgrey},
+  titrepan/.style={font=\scriptsize\bfseries\scshape, text=gdteal, anchor=west},
+}
+
+% ------------------------------------------------------------------ references
+\usepackage{url}
+\usepackage[hidelinks,pdfusetitle]{hyperref}
+\hypersetup{
+  colorlinks=true, linkcolor=gdnavy, citecolor=gdnavy, urlcolor=gdteal,
+  pdftitle={Mise en place du service DNS GANDAL, tache T005},
+  pdfauthor={FOMETHE SOMBANANG Maximilien},
+  pdfsubject={Projet GANDAL, cellule Reseaux et Securite, tache T005},
+  pdfkeywords={GANDAL, DNS, PowerDNS, isolation multi-tenant, TSIG, DNSSEC},
+}
+
+% --------------------------------------------------------------------- notations
+\newcommand{\zone}[1]{\texttt{#1}}
+\newcommand{\dir}[1]{\texttt{#1}}
+\newcommand{\opt}[1]{\texttt{#1}}
+\newcommand{\ip}[1]{\texttt{#1}}
+\newcommand{\statut}[1]{\textsc{#1}}
+\newcommand{\exig}[1]{\textsc{#1}}
+
+\newcommand{\interligne}{\vspace{2pt}}
+\setlength{\parskip}{3pt plus 1pt minus 0.5pt}
+\setlength{\emergencystretch}{2em}
+\widowpenalty=10000
+\clubpenalty=10000
+
+% siunitx absent de cette installation : passe-plat defensif
+\providecommand{\num}[1]{#1}

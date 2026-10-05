@@ -1,0 +1,425 @@
+% ================== Chapitre 4 : configurations de reference ================
+\chapter{Configurations de référence}
+\label{ch:configurations}
+
+Les configurations de ce chapitre sont complètes et cohérentes entre elles.
+Elles correspondent à la branche 4.9 de PowerDNS Authoritative et à la branche 5
+de PowerDNS Recursor. Deux précautions de version s'imposent avant application :
+les directives \opt{primary} et \opt{secondary} remplacent les anciennes
+directives \opt{master} et \opt{slave} depuis la version 4.5, et la branche 5 du
+résolveur introduit un format YAML équivalent au format classique employé ici.
+Le format attendu par la version effectivement installée doit être vérifié.
+
+\section{Serveurs autoritatifs ns1 et ns2}
+\label{sec:autoritatifs}
+
+\begin{lstlisting}[language=pdnsconf,caption={Configuration du serveur
+  autoritatif primaire ns1},label=lst:ns1]
+# /etc/powerdns/pdns.conf
+# GANDAL T005 : ns1, serveur autoritatif primaire, 10.30.4.10, hote H1
+
+# --- stockage : volume faible, replication assuree par transfert de zone
+launch=gsqlite3
+gsqlite3-database=/var/lib/powerdns/pdns.sqlite3
+
+# --- ecoute restreinte a l'adresse de service du VNet Services
+local-address=10.30.4.10
+local-port=53
+
+# --- role
+primary=yes
+secondary=no
+
+# --- replication : ns2 est le seul destinataire et le seul demandeur autorise
+allow-axfr-ips=10.30.4.11/32
+only-notify=10.30.4.11
+also-notify=10.30.4.11
+
+# --- valeurs par defaut des zones creees (cf. politique de duree de vie)
+default-ttl=3600
+default-soa-content=ns1.gandal.internal hostmaster.gandal.internal 0 3600 900 604800 300
+
+# --- transport : rester sous la MTU utile de 1450 octets imposee par VXLAN
+udp-truncation-threshold=1232
+max-tcp-connections=50
+
+# --- discretion et isolement
+version-string=anonymous
+security-poll-suffix=
+
+# --- API locale ; la terminaison TLS est assuree par le mandataire (4.5)
+webserver=yes
+webserver-address=127.0.0.1
+webserver-port=8081
+webserver-allow-from=127.0.0.1/32
+api=yes
+api-key=$PDNS_API_KEY_NS1
+
+# --- journalisation
+loglevel=4
+log-dns-queries=no
+log-dns-details=yes
+
+# --- execution sous systemd
+setuid=pdns
+setgid=pdns
+daemon=no
+guardian=no
+\end{lstlisting}
+
+Quatre directives appellent un commentaire. La journalisation des requêtes est
+désactivée sur l'autoritatif : ses clients légitimes sont au nombre de quatre et
+l'identité réelle du demandeur n'y est pas visible, puisque les requêtes
+arrivent par le résolveur. La journalisation utile est placée sur le résolveur,
+où l'adresse source est celle du client. La directive \opt{security-poll-suffix}
+vidée désactive la vérification périodique de version auprès d'un domaine
+externe, requête inutile et indésirable dans un environnement fermé. La
+directive \opt{version-string} masque la version du logiciel dans la réponse à
+\zone{version.bind}. Enfin, la clé d'API n'est pas écrite dans le fichier : elle
+est injectée dans l'environnement du service au démarrage, depuis le magasin de
+secrets. À partir de la version 4.7, la directive \opt{api-key} accepte également
+une empreinte produite par la commande \opt{pdnsutil hash-password}, ce qui évite
+toute forme en clair.
+
+\begin{lstlisting}[language=pdnsconf,caption={Écarts de configuration du serveur
+  autoritatif secondaire ns2},label=lst:ns2]
+# /etc/powerdns/pdns.conf
+# GANDAL T005 : ns2, serveur autoritatif secondaire, 10.30.4.11, hote H3
+# Seules les directives qui different de ns1 sont reproduites.
+
+local-address=10.30.4.11
+
+primary=no
+secondary=yes
+
+# --- ns1 est la seule source de NOTIFY et de transfert acceptee
+allow-notify-from=10.30.4.10/32
+xfr-cycle-interval=60
+xfr-max-received-mbytes=50
+
+# --- aucun transfert sortant : ns2 ne sert de source a personne
+allow-axfr-ips=
+
+api-key=$PDNS_API_KEY_NS2
+\end{lstlisting}
+
+La directive \opt{allow-axfr-ips} laissée vide ferme toute possibilité de
+transfert depuis ns2. L'API de ns2 reste active pour la supervision et
+l'inspection locale, mais le mandataire placé devant elle n'autorise que la
+méthode \opt{GET}, de sorte que le propriétaire d'écriture reste unique au sens
+de la section~\ref{sec:proprietaire}.
+
+\section{Création des zones et des clés de transfert}
+\label{sec:zones}
+
+La clé de transfert est unique parce que l'unique transfert du dispositif va de
+ns1 vers ns2. Le document 03 évoque des clés TSIG limitées par zone : cette
+granularité devient nécessaire dans la variante où les mises à jour dynamiques
+du RFC 2136 seraient employées, chaque émetteur ne devant alors pouvoir modifier
+que sa propre zone. Cette variante n'est pas retenue, comme l'explique la
+section~\ref{sec:proprietaire}.
+
+\begin{lstlisting}[caption={Création de l'espace de nommage sur ns1},
+  label=lst:zones]
+# --- sur ns1 : generation de la cle de transfert
+pdnsutil generate-tsig-key gandal-xfr hmac-sha256
+# la valeur produite est deposee dans le magasin de secrets, jamais dans Git
+
+# --- zone racine interne et identites des serveurs
+pdnsutil create-zone gandal.internal ns1.gandal.internal
+pdnsutil add-record  gandal.internal @    NS 3600 ns2.gandal.internal.
+pdnsutil add-record  gandal.internal ns1  A  3600 10.30.4.10
+pdnsutil add-record  gandal.internal ns2  A  3600 10.30.4.11
+pdnsutil add-record  gandal.internal rec1 A  3600 10.30.4.12
+pdnsutil add-record  gandal.internal rec2 A  3600 10.30.4.13
+
+# --- zone d'infrastructure, puis sa delegation depuis la zone parente
+pdnsutil create-zone infra.gandal.internal ns1.gandal.internal
+pdnsutil add-record  infra.gandal.internal @ NS 3600 ns2.gandal.internal.
+pdnsutil add-record  gandal.internal infra NS 3600 ns1.gandal.internal.
+pdnsutil add-record  gandal.internal infra NS 3600 ns2.gandal.internal.
+
+# --- inventaire d'infrastructure, extrait
+pdnsutil add-record infra.gandal.internal h1      A 3600 10.30.0.11
+pdnsutil add-record infra.gandal.internal h2      A 3600 10.30.0.12
+pdnsutil add-record infra.gandal.internal h3      A 3600 10.30.0.13
+pdnsutil add-record infra.gandal.internal xo      A 3600 10.30.0.20
+pdnsutil add-record infra.gandal.internal bastion A 3600 10.30.0.21
+pdnsutil add-record infra.gandal.internal kea1    A 3600 10.30.4.20
+pdnsutil add-record infra.gandal.internal kea2    A 3600 10.30.4.21
+pdnsutil add-record infra.gandal.internal ntp1    A 3600 10.30.4.30
+pdnsutil add-record infra.gandal.internal ntp2    A 3600 10.30.4.31
+pdnsutil add-record infra.gandal.internal ipam    A 3600 10.30.4.40
+pdnsutil add-record infra.gandal.internal agent   A 3600 10.30.4.41
+
+# --- zones inverses d'infrastructure
+for O in 0 1 2 4 5 6 7 8 10 16 17 ; do
+  pdnsutil create-zone "${O}.30.10.in-addr.arpa" ns1.gandal.internal
+  pdnsutil add-record  "${O}.30.10.in-addr.arpa" @ NS 3600 ns2.gandal.internal.
+done
+
+# --- cinquante tenants : zone directe, zone inverse et delegation
+for N in $(seq 1 50) ; do
+  T=$(printf 'tenant-%03d' "$N")
+  O=$(( 63 + N ))
+  pdnsutil create-zone "${T}.gandal.internal" ns1.gandal.internal
+  pdnsutil add-record  "${T}.gandal.internal" @  NS 3600 ns2.gandal.internal.
+  pdnsutil add-record  "${T}.gandal.internal" gw A  3600 "10.30.${O}.1"
+  pdnsutil create-zone "${O}.30.10.in-addr.arpa" ns1.gandal.internal
+  pdnsutil add-record  "${O}.30.10.in-addr.arpa" @ NS  3600 ns2.gandal.internal.
+  pdnsutil add-record  "${O}.30.10.in-addr.arpa" 1 PTR 3600 "gw.${T}.gandal.internal."
+  pdnsutil add-record  gandal.internal "$T" NS 3600 ns1.gandal.internal.
+  pdnsutil add-record  gandal.internal "$T" NS 3600 ns2.gandal.internal.
+done
+
+# --- transfert signe et increment automatique du numero de serie par l'API
+for Z in $(pdnsutil list-all-zones) ; do
+  pdnsutil set-meta "$Z" TSIG-ALLOW-AXFR gandal-xfr
+  pdnsutil set-meta "$Z" SOA-EDIT-API    DEFAULT
+done
+
+# --- controle de coherence avant mise en service
+pdnsutil rectify-all-zones
+pdnsutil check-all-zones
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Déclaration des zones secondaires sur ns2},
+  label=lst:ns2zones]
+# --- sur ns2 : import de la meme cle, puis declaration des zones secondaires
+pdnsutil import-tsig-key gandal-xfr hmac-sha256 "$TSIG_GANDAL_XFR"
+
+for Z in $(cat /etc/gandal/zones.list) ; do
+  pdnsutil create-secondary-zone "$Z" 10.30.4.10
+  pdnsutil activate-tsig-key     "$Z" gandal-xfr secondary
+done
+\end{lstlisting}
+
+La métadonnée \opt{SOA-EDIT-API} fixée à \opt{DEFAULT} fait incrémenter le
+numéro de série à chaque modification reçue par l'API. C'est cette
+incrémentation qui déclenche le message \opt{NOTIFY} et le transfert vers ns2 ;
+sans elle, les deux serveurs divergeraient silencieusement.
+
+\section{Résolveurs récursifs rec1 et rec2}
+\label{sec:recursif}
+
+\begin{lstlisting}[language=pdnsconf,caption={Configuration du résolveur
+  récursif rec1},label=lst:rec1]
+# /etc/powerdns/recursor.conf
+# GANDAL T005 : rec1, resolveur recursif, 10.30.4.12, hote H2
+# rec2 est identique, avec local-address=10.30.4.13 sur l'hote H1
+
+local-address=10.30.4.12
+local-port=53
+threads=2
+pdns-distributes-queries=no
+
+# --- clients autorises : strictement les prefixes du plan 02
+allow-from=10.30.0.0/24, 10.30.4.0/24, 10.30.5.0/24, 10.30.6.0/24,
+           10.30.7.0/24, 10.30.8.0/24, 10.30.16.16/28, 10.30.16.32/28,
+           10.30.64.0/18
+
+# --- espace interne : redirection vers les serveurs autoritatifs
+forward-zones=gandal.internal=10.30.4.10;10.30.4.11
+forward-zones+=30.10.in-addr.arpa=10.30.4.10;10.30.4.11
+
+# Sans cette directive, le resolveur servirait localement les zones inverses
+# privees du RFC 6303 et court-circuiterait la redirection ci-dessus.
+serve-rfc1918=no
+
+# --- validation DNSSEC de l'espace public, exception traitee dans le Lua
+dnssec=validate
+lua-config-file=/etc/powerdns/recursor-config.lua
+
+# --- politique de selection des zones (section 4.4)
+lua-dns-script=/etc/powerdns/views.lua
+
+# --- transport : rester sous la MTU utile de 1450 octets imposee par VXLAN
+edns-outgoing-bufsize=1232
+udp-truncation-threshold=1232
+qname-minimization=yes
+
+# --- cache dimensionne pour 4 GiB de memoire
+max-cache-entries=500000
+max-packetcache-entries=250000
+max-cache-ttl=86400
+max-negative-ttl=300
+
+# --- discretion et isolement
+version-string=anonymous
+security-poll-suffix=
+export-etc-hosts=no
+
+# --- point de metriques, expose par le mandataire (section 4.5)
+webserver=yes
+webserver-address=127.0.0.1
+webserver-port=8082
+webserver-allow-from=127.0.0.1/32
+api-key=$PDNS_REC_API_KEY
+
+loglevel=4
+\end{lstlisting}
+
+La directive \opt{serve-rfc1918} mérite d'être soulignée. Par défaut, le
+résolveur se déclare autoritatif et vide pour les zones inverses des espaces
+privés, afin d'éviter des requêtes inutiles vers la racine. Dans GANDAL, ce
+comportement empêcherait toute résolution inverse interne. Il est donc désactivé
+et remplacé par une redirection explicite de \zone{30.10.in-addr.arpa} vers les
+autoritatifs.
+
+La directive \opt{export-etc-hosts} est maintenue à la valeur \opt{no} : le
+fichier \opt{hosts} local des résolveurs contient le socle de secours décrit à la
+section~\ref{sec:amorcage}, qui n'a pas vocation à être publié et qui pourrait
+entrer en contradiction avec les zones autoritatives.
+
+\begin{lstlisting}[language=luapdns,caption={Configuration Lua du résolveur :
+  exception de validation et journalisation},label=lst:reclua]
+-- /etc/powerdns/recursor-config.lua
+-- Charge par la directive lua-config-file.
+
+-- Le domaine de premier niveau "internal" est reserve a l'usage prive et n'est
+-- pas delegue dans la racine publique. Avec dnssec=validate, le resolveur
+-- obtiendrait de la racine une preuve signee de son inexistence et declarerait
+-- toute reponse interne invalide. L'exception locale ci-dessous suspend la
+-- validation sous cette branche, et sous elle seulement.
+addNTA("internal.", "espace de nommage interne GANDAL, non delegue et non signe")
+
+-- Aucune exception n'est necessaire pour 10.in-addr.arpa : cette branche est
+-- deleguee sans enregistrement DS dans l'arbre public, donc deja non signee.
+
+-- Journalisation structuree vers un collecteur local du VNet Services.
+-- Monitoring lit ensuite les fichiers produits en pull (IF-NS-08).
+dnstapFrameStreamServer({"/var/run/pdns-recursor/dnstap.sock"})
+\end{lstlisting}
+
+\section{Script de politique de vue}
+\label{sec:script}
+
+Le script ci-dessous met en \oe uvre les équations \eqref{eq:tau} et
+\eqref{eq:zones}. Il est volontairement court et sans accès externe : il
+s'exécute pour chaque requête et toute opération coûteuse s'y traduirait
+directement en latence de résolution.
+
+\begin{lstlisting}[language=luapdns,caption={Politique de sélection des zones
+  appliquée sur rec1 et rec2},label=lst:views]
+-- /etc/powerdns/views.lua
+-- Politique de selection des zones par adresse source.
+-- Exigences couvertes : NET-FR-008, IF-NS-03 ; scenario de test S04.
+
+local ZONE_RACINE = "gandal.internal"
+local SUFFIXE_INV = "30.10.in-addr.arpa"
+
+local TAG_ADMIN = 1     -- gestion, services, monitoring, VPN administrateur
+local TAG_REFUS = 999   -- source autorisee mais sans vue interne
+
+local reseauxAdmin = newNMG()
+reseauxAdmin:addMask("10.30.0.0/24")
+reseauxAdmin:addMask("10.30.4.0/24")
+reseauxAdmin:addMask("10.30.5.0/24")
+reseauxAdmin:addMask("10.30.16.32/28")
+
+local reseauxTenant = newNMG()
+reseauxTenant:addMask("10.30.64.0/18")
+
+-- Plan 02 : le tenant n occupe 10.30.(63+n).0/24, pour 1 <= n <= 50.
+local function numeroTenant(adresse)
+  local o3 = tonumber(adresse:toString():match("^10%.30%.(%d+)%.%d+$"))
+  if o3 == nil or o3 < 64 or o3 > 113 then return nil end
+  return o3 - 63
+end
+
+-- gettag() est evalue avant toute consultation de cache et sa valeur entre
+-- dans la cle du cache paquet : deux vues ne partagent jamais une reponse.
+function gettag(remote, ednssubnet, localip, qname, qtype, ednsoptions, tcp)
+  if reseauxAdmin:match(remote) then return TAG_ADMIN end
+  if reseauxTenant:match(remote) then
+    local n = numeroTenant(remote)
+    if n ~= nil then return 1000 + n end
+  end
+  return TAG_REFUS
+end
+
+local function sousDomaine(nom, zone)
+  return nom == zone or nom:sub(-(#zone + 1)) == ("." .. zone)
+end
+
+function preresolve(dq)
+  local nom     = dq.qname:toStringNoDot():lower()
+  local interne = sousDomaine(nom, ZONE_RACINE)
+  local inverse = sousDomaine(nom, SUFFIXE_INV)
+
+  -- Les noms publics suivent la recursion ordinaire, quelle que soit la vue.
+  if not interne and not inverse then return false end
+
+  if dq.tag == TAG_ADMIN then return false end
+
+  if dq.tag > 1000 then
+    local n           = dq.tag - 1000
+    local zoneDirecte = string.format("tenant-%03d.%s", n, ZONE_RACINE)
+    local zoneInverse = string.format("%d.%s", n + 63, SUFFIXE_INV)
+    if sousDomaine(nom, zoneDirecte) or sousDomaine(nom, zoneInverse) then
+      return false
+    end
+  end
+
+  -- REFUSED plutot que NXDOMAIN : le refus ne revele pas l'existence du nom.
+  dq.rcode = pdns.REFUSED
+  return true
+end
+\end{lstlisting}
+
+Le script refuse également l'apex \zone{gandal.internal} aux sources tenant, ce
+qui empêche l'énumération des délégations et donc la découverte de la liste des
+tenants. Il laisse en revanche passer sans traitement toute requête portant sur
+un nom public, afin de ne pas pénaliser le cas le plus fréquent.
+
+\section{Exposition de l'API et des métriques}
+\label{sec:api}
+
+Le serveur HTTP intégré à PowerDNS ne fournit pas de terminaison TLS.
+L'exigence \exig{net-fr-016}, qui demande des API administratives chiffrées, est
+donc satisfaite en liant ce serveur à la boucle locale et en plaçant devant lui
+un mandataire qui assure le chiffrement et le contrôle d'accès par adresse.
+
+\begin{lstlisting}[caption={Terminaison TLS et contrôle d'accès devant l'API
+  autoritative},label=lst:nginx]
+# /etc/nginx/conf.d/pdns-api.conf  sur ns1 (10.30.4.10)
+
+server {
+    listen 10.30.4.10:8443 ssl;
+    server_name ns1.gandal.internal;
+
+    ssl_certificate     /etc/ssl/gandal/ns1.crt;   # PKI interne, IF-EXT-01
+    ssl_certificate_key /etc/ssl/gandal/ns1.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    # Seul l'agent reseau publie des enregistrements.
+    location /api/ {
+        allow 10.30.4.41/32;
+        deny  all;
+        proxy_pass http://127.0.0.1:8081;
+    }
+
+    # Seul Monitoring lit les metriques, et il en est l'initiateur.
+    location = /metrics {
+        allow 10.30.5.10/32;
+        deny  all;
+        proxy_pass http://127.0.0.1:8081/metrics;
+    }
+
+    location / { return 404; }
+}
+
+# Sur ns2, le bloc /api/ est complete par la restriction suivante, qui
+# garantit l'unicite du proprietaire d'ecriture :
+#     limit_except GET { deny all; }
+#
+# Sur rec1 et rec2, seul le bloc /metrics est publie, vers 127.0.0.1:8082.
+\end{lstlisting}
+
+Ce montage répond également à l'interface IF-NS-08 : les quatre instances
+n'ouvrent aucune connexion vers Monitoring, qui vient lire leur point de
+métriques. La limitation de débit en réponse n'est pas activée sur les serveurs
+autoritatifs, et cette absence est délibérée : PowerDNS Authoritative n'intègre
+pas cette fonction, et le risque d'amplification qu'elle traite suppose une
+exposition publique que la matrice de flux interdit. Si cette exposition devait
+changer, un répartiteur DNS spécialisé devrait être placé en amont.

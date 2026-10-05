@@ -1,0 +1,324 @@
+% ================== Chapitre 5 : cycle de vie et exploitation ===============
+\chapter{Cycle de vie des enregistrements et exploitation}
+\label{ch:cycle}
+
+\section{Propriétaire d'écriture unique et séquence de publication}
+\label{sec:proprietaire}
+
+Le document 03 pose une règle explicite : ne choisir qu'un propriétaire
+d'écriture par enregistrement. Il ouvre deux pistes, la mise à jour dynamique
+issue de Kea au moyen du RFC 2136, ou la mise à jour par l'agent au travers de
+l'API autoritative.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Arbitrage du mécanisme de mise à jour}\label{tab:arbitrage}
+\begin{tabular}{@{}R{0.22}R{0.30}R{0.33}R{0.15}@{}}
+\toprule
+\textbf{Option} & \textbf{Apport} & \textbf{Limite} & \textbf{Décision}\\
+\midrule
+Mise à jour par l'agent via l'API autoritative &
+  Un seul émetteur pour toutes les zones. La modification porte sur un RRset
+  complet, ce qui rend l'opération naturellement convergente. Le retour d'API
+  fournit un état exploitable par la machine d'états et corrélable à un
+  \opt{operation\_id}. &
+  Ajoute une dépendance à la disponibilité de l'agent pour toute publication. &
+  \textbf{Retenue}\\
+Mise à jour dynamique RFC 2136 déclenchée par Kea &
+  Rapproche la publication de l'attribution du bail et supprime un
+  intermédiaire. &
+  Introduit un second émetteur, donc un conflit possible de propriété sur les
+  mêmes enregistrements. Exige une clé TSIG par zone, soit cent treize clés à
+  gérer, et une compatibilité du moteur de stockage qui reste à vérifier. &
+  Alternative documentée\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\figSequence
+\caption{Séquence de publication d'un enregistrement et branche dégradée}
+\label{fig:sequence}
+\end{figure}
+
+\label{sec:publication}
+Les deux appels ci-dessous constituent le contrat que l'agent doit respecter.
+Ils sont donnés pour une machine du tenant 7 recevant l'adresse
+\ip{10.30.70.37}, qui appartient bien au pool dynamique \ip{.10} à \ip{.199}
+défini par le document 02.
+
+\begin{lstlisting}[caption={Publication conjointe de l'enregistrement direct et
+  de l'enregistrement inverse},label=lst:publication]
+PATCH /api/v1/servers/localhost/zones/tenant-007.gandal.internal.  HTTP/1.1
+Host: ns1.gandal.internal:8443
+X-API-Key: <cle injectee depuis le magasin de secrets>
+Content-Type: application/json
+
+{
+  "rrsets": [{
+    "name": "vm-0042.tenant-007.gandal.internal.",
+    "type": "A",
+    "ttl": 300,
+    "changetype": "REPLACE",
+    "records": [ { "content": "10.30.70.37", "disabled": false } ],
+    "comments": [ { "account": "agent",
+                    "content": "operation_id=7f3c..., lease_id=..." } ]
+  }]
+}
+
+PATCH /api/v1/servers/localhost/zones/70.30.10.in-addr.arpa.  HTTP/1.1
+
+{
+  "rrsets": [{
+    "name": "37.70.30.10.in-addr.arpa.",
+    "type": "PTR",
+    "ttl": 300,
+    "changetype": "REPLACE",
+    "records": [ { "content": "vm-0042.tenant-007.gandal.internal.",
+                   "disabled": false } ]
+  }]
+}
+\end{lstlisting}
+
+La publication n'est pas considérée comme acquise à la réception du code 204.
+L'agent interroge ensuite ns1, ns2, rec1 et rec2 pour le nom publié et ne fait
+progresser l'opération vers l'état \opt{SERVICES\_READY} qu'après concordance
+des quatre réponses. Ce contrôle détecte en particulier un transfert de zone
+bloqué, défaut qui resterait sinon invisible jusqu'à la première panne de ns1.
+
+\section{Idempotence, rejeu et réconciliation}
+\label{sec:idempotence}
+
+L'exigence \exig{net-nfr-006} demande un rejeu déterministe et idempotent. Le
+choix d'un changement de type \opt{REPLACE} portant sur un RRset complet y
+répond par construction : en notant $\Phi$ l'application d'une publication sur
+l'état des zones, $\Phi \circ \Phi = \Phi$, c'est-à-dire que l'état final ne
+dépend pas du nombre d'exécutions. Une précaution reste nécessaire.
+
+\begin{encadre}
+\titreencadre{Précaution sur le rejeu}
+Une modification par l'API incrémente le numéro de série de la zone, y compris
+lorsque le contenu soumis est identique à celui déjà publié. Un rejeu
+systématique provoquerait donc autant de transferts de zone inutiles vers ns2.
+
+\smallskip
+L'agent doit par conséquent lire le RRset avant de l'écrire et n'émettre la
+modification que si le contenu diffère. Le rejeu reste correct dans tous les
+cas, mais il devient également économe.
+\end{encadre}
+
+Une réconciliation périodique compare les allocations enregistrées dans l'IPAM
+aux enregistrements effectivement publiés, dans les deux sens. Elle signale les
+divergences sans les corriger automatiquement : une correction automatique sur
+un état mal compris est le moyen le plus rapide de propager une erreur à
+l'ensemble des zones. Deux familles de divergence sont attendues,
+l'enregistrement publié sans allocation correspondante, trace d'une suppression
+incomplète, et l'allocation active sans enregistrement, trace d'une publication
+interrompue.
+
+\section{Suppression, quarantaine et mode dégradé}
+\label{sec:suppression}
+
+L'ordre de suppression est l'inverse de l'ordre de publication et il n'est pas
+interchangeable. Le document 03 impose d'attendre le retrait des interfaces
+virtuelles et la fin des références avant libération, et précise qu'une panne
+DNS ne libère pas une adresse encore utilisée.
+
+\begin{enumerate}
+  \item Retrait de l'interface virtuelle de la machine et fin du bail.
+  \item Suppression des enregistrements A et PTR par un changement de type
+    \opt{DELETE} sur les deux zones concernées.
+  \item Attente de la durée de quarantaine $Q = 900$ secondes, qui satisfait
+    l'inégalité \eqref{eq:ttl}.
+  \item Retour de l'adresse au pool par l'IPAM.
+\end{enumerate}
+
+Si la suppression des enregistrements échoue, l'adresse n'est pas rendue au pool
+et l'opération reste dans l'état \opt{DELETING}, observable. Le comportement
+symétrique s'applique à la publication : une panne de l'API ou des serveurs
+autoritatifs laisse l'opération en cours, signalée par une alerte, sans que
+l'adresse déjà attribuée soit considérée comme libre. Le trafic des machines
+déjà configurées n'est pas interrompu : seules les opérations nouvelles sont
+suspendues. Cette distinction est précisément ce que le test \opt{G04} doit
+établir.
+
+\section{Amorçage, ordre de reprise et adresses de secours}
+\label{sec:amorcage}
+
+Le document Underlay insiste sur la rupture des cycles de démarrage : si le
+serveur DNS et le bastion dépendent uniquement d'un ensemble dont l'accès
+suppose ces mêmes services, une panne générale rend la restauration difficile.
+Le socle minimal ci-dessous doit donc être présent sur les trois hôtes, sur XO,
+sur le bastion et sur les machines de services.
+
+\begin{lstlisting}[language=pdnsconf,caption={Adresses de secours à conserver
+  hors du service DNS},label=lst:hosts]
+# /etc/hosts  : socle de reprise GANDAL
+# Permet d'administrer et de reconstruire l'infrastructure sans dependre
+# du service DNS lui-meme. Non publie : voir export-etc-hosts=no.
+
+127.0.0.1    localhost
+10.30.0.11   h1.infra.gandal.internal         h1
+10.30.0.12   h2.infra.gandal.internal         h2
+10.30.0.13   h3.infra.gandal.internal         h3
+10.30.0.20   xo.infra.gandal.internal         xo
+10.30.0.21   bastion.infra.gandal.internal    bastion
+10.30.4.10   ns1.gandal.internal              ns1
+10.30.4.11   ns2.gandal.internal              ns2
+10.30.4.12   rec1.gandal.internal             rec1
+10.30.4.13   rec2.gandal.internal             rec2
+10.30.4.20   kea1.infra.gandal.internal       kea1
+10.30.4.21   kea2.infra.gandal.internal       kea2
+10.30.4.30   ntp1.infra.gandal.internal       ntp1
+10.30.4.31   ntp2.infra.gandal.internal       ntp2
+10.30.4.40   ipam.infra.gandal.internal       ipam
+10.30.4.41   agent.infra.gandal.internal      agent
+\end{lstlisting}
+
+\begin{longtable}{@{}C{0.07}R{0.24}R{0.16}R{0.53}@{}}
+\caption{Ordre de reprise après indisponibilité étendue}\label{tab:reprise}\\
+\toprule
+\textbf{Rang} & \textbf{Élément remis en service} & \textbf{Dépend de} &
+\textbf{Remarque}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Rang} & \textbf{Élément remis en service} & \textbf{Dépend de} &
+\textbf{Remarque}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & Transport et hôtes & Aucune &
+  Les hyperviseurs se joignent par adresse de gestion, sans résolution.\\
+2 & Source de temps & Transport &
+  La validation DNSSEC et la vérification des certificats exigent une horloge
+  plausible. Au démarrage à froid, le client de temps doit être autorisé à
+  corriger un écart important avant toute vérification cryptographique.\\
+3 & Autoritatifs ns1 puis ns2 & Temps &
+  Le fichier \opt{hosts} suffit à les atteindre.\\
+4 & Résolveurs rec1 et rec2 & Autoritatifs &
+  Leur propre résolution locale pointe sur la boucle locale, jamais sur leur
+  homologue, afin d'éviter une dépendance croisée.\\
+5 & IPAM puis agent & DNS &
+  La réconciliation ne démarre qu'une fois le DNS joignable.\\
+6 & DHCP & DNS et IPAM &
+  Les options distribuées référencent les résolveurs.\\
+7 & Orchestration et supervision & Ensemble des précédents &
+  Dernière étape ; la supervision constate l'état sans conditionner la remise
+  en service.\\
+\end{longtable}
+
+Le point sensible est le rang 2. La validation cryptographique du temps par NTS
+suppose un certificat valide, dont la vérification suppose une horloge correcte,
+qui suppose elle-même le service de temps. Le document 03 signale ce cas sans le
+trancher. Du point de vue du DNS, la conséquence est simple : si l'horloge est
+fausse, la validation DNSSEC rejette des réponses publiques pourtant légitimes,
+ce qui se manifeste par des codes \opt{SERVFAIL} sur l'espace public alors que
+l'espace interne répond normalement. Ce symptôme doit figurer dans la procédure
+de diagnostic, car il oriente immédiatement vers l'horloge et non vers le DNS.
+
+\section{Journalisation, métriques et alertes}
+\label{sec:journaux}
+
+La journalisation est placée sur les résolveurs, seuls points où l'adresse
+source est celle du client réel. Elle est horodatée en temps universel
+coordonné, conformément à \exig{net-fr-018}, et limitée aux éléments
+nécessaires : horodatage, adresse source, nom demandé, type, code de réponse et
+étiquette de vue. La durée de conservation et la responsabilité des données
+relèvent de l'interface avec IAM et les responsables métier.
+
+\begin{longtable}{@{}R{0.30}R{0.30}R{0.40}@{}}
+\caption{Indicateurs et alertes du service DNS}\label{tab:alertes}\\
+\toprule
+\textbf{Indicateur} & \textbf{Seuil ou condition} & \textbf{Portée}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Indicateur} & \textbf{Seuil ou condition} & \textbf{Portée}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Disponibilité de chaque instance & Absence de réponse à une sonde SOA pendant
+  60 s & Majeure\\
+Écart de numéro de série entre ns1 et ns2 & Écart persistant au-delà de deux
+  cycles de transfert, soit 120 s &
+  Majeure : la réplication est rompue et la redondance n'est plus effective\\
+Taux de réponses \opt{REFUSED} par vue & Hausse significative par rapport à la
+  référence &
+  Mineure : politique trop stricte, mauvaise distribution des résolveurs, ou
+  tentative d'accès\\
+Taux de réponses \opt{SERVFAIL} & Hausse sur l'espace public &
+  Majeure : dérive d'horloge, perte de la sortie externe ou échec de
+  validation\\
+Âge du dernier transfert réussi sur ns2 & Supérieur à deux fois
+  \opt{refresh}, soit 7\,200 s & Majeure\\
+Opérations de publication en échec & Toute opération bloquée au-delà de son
+  délai & Majeure\\
+Divergence IPAM et zones publiées & Toute divergence persistant après deux
+  cycles de réconciliation & Mineure, à instruire\\
+Tentatives de transfert de zone refusées & Toute occurrence &
+  À instruire en sécurité\\
+Absence de données de collecte & Interruption de la lecture en pull &
+  Majeure : la panne de collecte doit alerter, et non effacer silencieusement
+  les traces\\
+\end{longtable}
+
+\section{Sauvegarde, restauration et gestion des secrets}
+\label{sec:sauvegarde}
+
+L'objectif historique de reconstruction en moins de soixante minutes reste à
+évaluer, et cette évaluation relève de T009. Ce dossier en fournit les éléments :
+ce qui doit être sauvegardé, où, et dans quel ordre la restauration s'effectue.
+
+\begin{lstlisting}[caption={Export et restauration de l'état autoritatif},
+  label=lst:sauvegarde]
+# --- export quotidien de l'etat autoritatif, depuis ns1
+install -d -m 0750 /var/backups/gandal/dns
+for Z in $(pdnsutil list-all-zones) ; do
+  pdnsutil list-zone "$Z" > "/var/backups/gandal/dns/${Z}.zone"
+done
+
+# --- l'export est verse dans le depot versionne, sans aucun secret
+#     Les cles TSIG et les cles d'API restent dans le magasin de secrets.
+
+# --- restauration de ns1 sur une machine neuve
+pdnsutil import-tsig-key gandal-xfr hmac-sha256 "$TSIG_GANDAL_XFR"
+for F in /var/backups/gandal/dns/*.zone ; do
+  Z=$(basename "$F" .zone)
+  pdnsutil create-zone "$Z" ns1.gandal.internal
+  pdnsutil load-zone   "$Z" "$F"
+  pdnsutil set-meta    "$Z" TSIG-ALLOW-AXFR gandal-xfr
+  pdnsutil set-meta    "$Z" SOA-EDIT-API    DEFAULT
+done
+pdnsutil rectify-all-zones
+pdnsutil check-all-zones
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Gestion des secrets et des sauvegardes du service}\label{tab:secrets}
+\begin{tabular}{@{}R{0.22}R{0.28}R{0.50}@{}}
+\toprule
+\textbf{Élément} & \textbf{Emplacement} & \textbf{Règle}\\
+\midrule
+Clé TSIG de transfert & Magasin de secrets &
+  Rotation annuelle ou sur incident. La rotation se fait en déclarant la
+  nouvelle clé sur les deux serveurs avant de retirer l'ancienne.\\
+Clé d'API de ns1 & Magasin de secrets, injectée dans l'environnement du
+  service &
+  Rotation lors de tout changement du porteur de l'agent. L'empreinte peut
+  figurer en configuration à partir de la version 4.7.\\
+Certificat TLS du mandataire & PKI interne, interface IF-EXT-01 &
+  Renouvellement avant échéance ; la supervision du délai restant fait partie
+  des indicateurs attendus.\\
+Exports de zones & Dépôt versionné et copie hors du cluster &
+  Une copie qui ne serait disponible que dans le cluster administré n'offre
+  aucune reprise autonome après sa perte.\\
+\bottomrule
+\end{tabular}
+\end{table}

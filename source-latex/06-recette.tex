@@ -1,0 +1,122 @@
+% ================== Chapitre 6 : controles de recette =======================
+\chapter{Contrôles de recette de la tâche}
+\label{ch:recette}
+
+\section{Critères d'acceptation et commandes associées}
+
+Les contrôles ci-dessous définissent ce que signifie exactement, pour T005, que
+le service DNS est en place. Ils portent sur le service lui-même et non sur le
+comportement d'ensemble du datacenter. Conformément à la règle du corpus, leur
+statut initial est \statut{non exécuté} et aucun résultat n'est présenté comme
+obtenu.
+
+\begin{longtable}{@{}C{0.07}R{0.20}R{0.38}R{0.35}@{}}
+\caption{Contrôles de recette de T005 ; statut initial de l'ensemble :
+  \statut{non exécuté}}\label{tab:controles}\\
+\toprule
+\textbf{Code} & \textbf{Objet} & \textbf{Précondition et action} &
+\textbf{Résultat attendu}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Code} & \textbf{Objet} & \textbf{Précondition et action} &
+\textbf{Résultat attendu}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+C01 & Réponse autoritative directe &
+  \texttt{dig +norecurse @10.30.4.10 ns1.gandal.internal A} &
+  \opt{NOERROR}, indicateur \opt{aa} présent, réponse \ip{10.30.4.10}\\
+C02 & Cohérence entre les deux autoritatifs &
+  \texttt{dig +short @10.30.4.10 tenant-007.gandal.internal SOA} puis la même
+  requête sur \ip{10.30.4.11} &
+  Numéros de série identiques après réception du \opt{NOTIFY}\\
+C03 & Résolution inverse d'une machine tenant &
+  \texttt{dig +short @10.30.4.12 -x 10.30.70.37} &
+  \zone{vm-0042.tenant-007.\allowbreak gandal.internal.}\\
+C04 & Transfert de zone refusé à un tiers &
+  \texttt{dig @10.30.4.10 gandal.internal AXFR} depuis une source autre que ns2 &
+  Transfert refusé ; le transfert signé demandé par ns2 reste possible\\
+C05 & Isolation entre tenants &
+  depuis \ip{10.30.70.37} : \texttt{dig @10.30.4.12
+  gw.tenant-008.gandal.internal A} &
+  \opt{REFUSED}, sans divulgation de l'existence du nom\\
+C06 & Isolation de l'infrastructure &
+  depuis \ip{10.30.70.37} : \texttt{dig @10.30.4.12 xo.infra.gandal.internal A} &
+  \opt{REFUSED} ; la même requête depuis le pool VPN administrateur aboutit\\
+C07 & Récursion autorisée et bornée &
+  depuis \ip{10.30.70.37} : \texttt{dig @10.30.4.12 example.org A} ; puis la
+  même requête depuis une source hors \opt{allow-from} &
+  \opt{NOERROR} dans le premier cas, absence de service dans le second\\
+C08 & Autoritatif inatteignable depuis un tenant &
+  depuis \ip{10.30.70.37} : \texttt{dig +time=2 +tries=1 @10.30.4.10
+  gw.tenant-007.gandal.internal A} &
+  Absence de réponse, refus journalisé sur la passerelle\\
+C09 & Bascule sur perte d'une instance &
+  Arrêt de ns1 puis requête sur ns2 ; arrêt de rec1 puis requête depuis un
+  client dont le \opt{resolv.conf} liste \ip{.12} et \ip{.13} &
+  Résolution maintenue dans les deux cas ; publication suspendue pendant
+  l'arrêt de ns1\\
+C10 & Idempotence de la publication &
+  Émission deux fois du même appel du listing~\ref{lst:publication} &
+  État final identique, aucun doublon, aucun second transfert si la lecture
+  préalable est implémentée\\
+C11 & Mode dégradé de publication &
+  Arrêt de l'API autoritative pendant une publication &
+  Opération maintenue en état observable, adresse non rendue au pool, alerte
+  levée\\
+C12 & Amorçage sans DNS &
+  Depuis H1, accès à XO et au bastion avec le service DNS arrêté &
+  Accès obtenu par le socle de reprise du listing~\ref{lst:hosts}\\
+C13 & Comportement sous contrainte de MTU &
+  \texttt{dig +dnssec +bufsize=1232} sur une réponse volumineuse, puis
+  \texttt{dig +tcp} &
+  Troncature suivie d'une reprise en TCP, sans perte silencieuse\\
+C14 & Journaux et métriques en lecture pull &
+  Lecture du point de métriques depuis \ip{10.30.5.10}, puis tentative
+  d'initiation depuis une instance DNS vers Monitoring &
+  Lecture réussie, initiation inverse refusée, horodatage en temps universel\\
+C15 & Discrétion du service &
+  \texttt{dig @10.30.4.10 version.bind CH TXT} & Réponse anonymisée\\
+\end{longtable}
+
+\section{Transmission à la campagne de validation}
+
+Plusieurs scénarios du corpus dépassent le périmètre de cette tâche parce qu'ils
+engagent d'autres lots ou mesurent des cibles globales. Ils sont rappelés ici
+avec la contribution que T005 leur apporte, afin que la campagne de validation
+puisse les reprendre sans redéfinir le contexte.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Scénarios transmis à la campagne de validation}\label{tab:transmis}
+\begin{tabular}{@{}R{0.16}R{0.34}R{0.50}@{}}
+\toprule
+\textbf{Scénario} & \textbf{Objet} & \textbf{Contribution de T005}\\
+\midrule
+S04, document 03 &
+  Requêtes DNS vers l'infrastructure et vers un tenant voisin depuis le VNet
+  USER &
+  C05 et C06 en constituent la vérification unitaire ; S04 y ajoute le parcours
+  complet depuis une machine réellement provisionnée.\\
+S08, document 03 &
+  Restauration depuis une sauvegarde indépendante &
+  La procédure et le contenu de la sauvegarde sont fournis à la
+  section~\ref{sec:sauvegarde} ; la mesure du délai reste à produire.\\
+G04, document 01 &
+  Coupure de XO puis d'un service DNS &
+  Le comportement attendu est décrit à la section~\ref{sec:suppression} :
+  continuité du trafic existant, suspension des opérations nouvelles.\\
+V09, document 02 &
+  Création de cinquante VNets et cinq cents baux &
+  La génération des cent treize zones est automatisée par le
+  listing~\ref{lst:zones} ; la tenue en charge du service reste à mesurer.\\
+NET-NFR-003 &
+  Reconstruction en moins de soixante minutes &
+  Éléments de reprise fournis aux sections~\ref{sec:amorcage}
+  et~\ref{sec:sauvegarde} ; la cible est à évaluer et non à présumer.\\
+\bottomrule
+\end{tabular}
+\end{table}

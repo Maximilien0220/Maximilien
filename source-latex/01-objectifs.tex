@@ -1,0 +1,192 @@
+% ================== Chapitre 1 : objectifs, perimetre et exigences ==========
+\chapter{Objectifs, périmètre et exigences couvertes}
+\label{ch:objectifs}
+
+\section{Objectif de la tâche et définition du service attendu}
+
+La tâche T005 consiste à mettre en place le service DNS de GANDAL. Dans le
+découpage du suivi d'équipe, elle se situe après le gel du plan d'adressage et
+du modèle IPAM, et en parallèle du DHCP haute disponibilité et de la
+synchronisation temporelle. Le service attendu n'est pas un simple serveur de
+noms : le document 03 lui assigne quatre fonctions distinctes.
+
+\begin{itemize}
+  \item \textbf{Publier l'espace de nommage interne du datacenter}, c'est-à-dire
+    les noms d'infrastructure et les noms des machines de chaque tenant, avec
+    les résolutions inverses correspondantes.
+  \item \textbf{Fournir une résolution récursive contrôlée} aux machines
+    autorisées, pour les noms internes comme pour les noms publics.
+  \item \textbf{Garantir la confidentialité des noms entre domaines} : un tenant
+    ne doit lire ni la zone d'infrastructure ni la zone d'un autre tenant.
+  \item \textbf{S'insérer dans le cycle de vie d'une allocation} : la publication
+    d'un enregistrement est une étape de la machine d'états de création, entre
+    l'attribution du bail et l'exposition de l'état \opt{READY}.
+\end{itemize}
+
+Mettre en place le DNS signifie donc arrêter une architecture, un espace de
+nommage, des règles d'accès et un mécanisme de mise à jour, puis produire les
+configurations et procédures qui permettent de les appliquer de manière
+reproductible. C'est l'objet des chapitres \ref{ch:conception} à
+\ref{ch:cycle}.
+
+\begin{encadre}
+\titreencadre{Règle de restitution du corpus}
+Tous les documents de cadrage de GANDAL précisent que la règle est d'effectuer
+une simulation au préalable et qu'aucun déploiement ni essai n'est présenté
+comme effectué. Ce dossier respecte cette règle : il fournit des configurations
+et des procédures complètes, mais les contrôles du chapitre~\ref{ch:recette}
+portent le statut \statut{non exécuté}. Produire les preuves correspondantes
+relève de la tâche T009, qui n'est pas traitée ici.
+\end{encadre}
+
+\section{Contexte repris du corpus et données d'entrée}
+
+Les choix qui suivent sont contraints par des décisions déjà arrêtées. Elles ne
+sont pas rediscutées ici ; elles sont rappelées parce qu'elles déterminent
+directement la conception du service.
+
+\begin{longtable}{@{}R{0.31}R{0.52}R{0.17}@{}}
+\caption{Données d'entrée de la tâche T005 et leurs conséquences directes}
+\label{tab:entrees}\\
+\toprule
+\textbf{Contrainte ou décision antérieure} &
+\textbf{Conséquence sur le service DNS} & \textbf{Source}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Contrainte ou décision antérieure} &
+\textbf{Conséquence sur le service DNS} & \textbf{Source}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Trois hôtes XCP-ng, une NIC par hôte, un commutateur L2 et un routeur non
+  manageables &
+  La redondance logicielle ne peut couvrir que la perte d'une machine virtuelle
+  ou d'un hôte. SW1 et R1 restent des dépendances communes assumées. &
+  Document 01, 2.1\\
+Bloc \ip{10.30.0.0/16}, VNet Services en \ip{10.30.4.0/24}, DNS autoritatif en
+  \ip{.10} et \ip{.11}, DNS récursif en \ip{.12} et \ip{.13} &
+  Les adresses des quatre instances sont imposées. Ce dossier les consomme sans
+  redéfinition locale. & Document 02, tableau 2.5\\
+Tenant $n$ associé au préfixe \ip{10.30.(63+n).0/24}, pour
+  $1\leqslant n\leqslant 50$ &
+  La correspondance entre un tenant, sa zone directe et sa zone inverse se
+  déduit arithmétiquement, ce qui rend la génération des zones et la politique
+  de vue déterministes. & Document 02, 2.4\\
+VXLAN sur IPv4 avec MTU externe de 1\,500 octets &
+  Au plus 1\,450 octets utiles pour le paquet IP interne. Le dimensionnement
+  des réponses DNS en doit tenir compte. & Document 02, 2.5\\
+PowerDNS Authoritative complété de PowerDNS Recursor &
+  Choix proposé par la comparaison du document 03 ; BIND reste l'alternative
+  documentée du corpus. & Document 03, tableau 1.1\\
+Aucun VNet surveillé n'initie de connexion vers Monitoring &
+  Les journaux et métriques du DNS sont conservés localement et lus en pull.
+  Aucun envoi direct n'est configuré. & Document 03, 2.7\\
+Deux instances de chaque service, sur des hôtes distincts &
+  Objectif de continuité logique, sans prétendre à l'élimination des points
+  uniques de défaillance. & \exig{net-nfr-001}\\
+\end{longtable}
+
+\section{Registre des exigences couvertes}
+
+Le tableau \ref{tab:tracabilite} relie chaque exigence du registre des services
+réseau au mécanisme retenu dans ce dossier et au contrôle de recette qui
+permettra de la vérifier. Les identifiants de contrôle \opt{C01} à \opt{C15}
+sont définis au chapitre~\ref{ch:recette}.
+
+\begin{longtable}{@{}R{0.14}R{0.20}R{0.50}R{0.16}@{}}
+\caption{Traçabilité entre les exigences du registre et les mécanismes de ce
+  dossier}\label{tab:tracabilite}\\
+\toprule
+\textbf{Exigence} & \textbf{Objet} & \textbf{Mécanisme retenu et section} &
+\textbf{Contrôle}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Exigence} & \textbf{Objet} & \textbf{Mécanisme retenu et section} &
+\textbf{Contrôle}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+NET-FR-004 & Paramètres DNS par tenant & Objet profil DNS porté par l'IPAM et
+  consommé par DHCP et Templates (\ref{sec:profil}) & C03\\
+NET-FR-006 & DNS interne et mises à jour & Zones internes autoritatives et
+  publication par l'agent via l'API (\ref{sec:nommage}, \ref{sec:publication})
+  & C01, C10\\
+NET-FR-007 & Récursion DNS autorisée & \opt{allow-from} restreint aux préfixes
+  du plan, sortie 53 explicite (\ref{sec:recursif}) & C07\\
+NET-FR-008 & Confidentialité des noms entre domaines & Politique de vue par
+  adresse source, transferts fermés, autoritatif non exposé
+  (\ref{sec:vue}, \ref{sec:flux}) & C04, C05, C06\\
+NET-FR-012 & Allocation et libération idempotentes & Modification par RRset avec
+  lecture préalable et clé d'idempotence (\ref{sec:idempotence}) & C10\\
+NET-FR-013 & Paramètres VM via Templates & Profil DNS transmis par le contrat
+  IF-NS-06 (\ref{sec:profil}) & C03\\
+NET-FR-014 & Métriques services & Point de métriques en lecture seule,
+  interrogé en pull (\ref{sec:journaux}) & C14\\
+NET-FR-016 & API administratives chiffrées & API autoritative liée à la boucle
+  locale derrière une terminaison TLS (\ref{sec:api}) & C10\\
+NET-FR-017 & DNS accessible selon profil VPN & Vue administration pour le pool
+  VPN admin, refus par défaut pour le pool utilisateur (\ref{sec:vpn}) & C06\\
+NET-FR-018 & Journaux horodatés & Journalisation dnstap horodatée en temps
+  universel, conservée localement (\ref{sec:journaux}) & C14\\
+NET-FR-019 & Gestion de l'infrastructure isolée & Les VNets tenant ne joignent
+  ni le plan de gestion ni les autoritatifs (\ref{sec:flux}) & C08\\
+NET-FR-020 & Simulation avant déploiement & Statut \statut{non exécuté}
+  maintenu ; maquette préalable exigée (chapitre~\ref{ch:limites}) & aucun\\
+NET-NFR-001 & Deux instances DNS & Deux autoritatifs et deux récursifs répartis
+  sur les trois hôtes (\ref{sec:placement}) & C09\\
+NET-NFR-003 & Reconstruction en moins de 60 min & Export des zones et procédure
+  de restauration (\ref{sec:sauvegarde}) ; mesure confiée à T009 & aucun\\
+NET-NFR-005 & Protection des communications administratives & TLS sur l'API,
+  TSIG sur les transferts (\ref{sec:zones}, \ref{sec:api}) & C04\\
+NET-NFR-006 & Rejeu déterministe et idempotent & Opérations convergentes sur
+  l'état désiré des RRsets (\ref{sec:idempotence}) & C10\\
+NET-NFR-007 & Secrets absents des dépôts en clair & Clés API et TSIG injectées
+  au démarrage ; empreinte en configuration (\ref{sec:sauvegarde}) & aucun\\
+IF-NS-03 & DNS vers VNet et SDN : profils et ACL par tenant & Étiquette de vue
+  dérivée du préfixe tenant (\ref{sec:vue}) & C05\\
+IF-NS-06 & Agent vers Templates : réseau, DNS, MTU & Contenu normalisé du
+  profil DNS (\ref{sec:profil}) & C03\\
+IF-NS-08 & Network vers Monitoring : lecture en pull & Aucune initiation
+  sortante depuis les VM DNS (\ref{sec:journaux}) & C14\\
+\end{longtable}
+
+\section{Limites de périmètre et articulation avec les autres tâches}
+
+Trois tâches voisines touchent au même cycle de vie sans relever de T005. Les
+points de contact sont explicités pour éviter une double définition.
+
+\begin{longtable}{@{}R{0.30}R{0.70}@{}}
+\caption{Frontières de la tâche T005}\label{tab:frontieres}\\
+\toprule
+\textbf{Tâche voisine} & \textbf{Point de contact et répartition}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Tâche voisine} & \textbf{Point de contact et répartition}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+T004, DHCP haute disponibilité \newline (B.~Heudep Djandja) &
+  T005 fournit les adresses des résolveurs et le nom de domaine à distribuer
+  dans les options 6, 15 et 119. T005 ne définit ni les scopes, ni le mode de
+  haute disponibilité de Kea, ni la durée de bail. La valeur de bail est ici
+  une hypothèse de travail, signalée comme telle.\\
+T006, synchronisation temporelle \newline (B.~Heudep Djandja) &
+  La validation DNSSEC et la journalisation corrélable supposent une horloge
+  correcte. T005 énonce cette dépendance et la contrainte d'amorçage à froid,
+  mais ne configure pas chrony.\\
+T007, agent réseau et API de provisionnement \newline (P.~Pangui Pianne) &
+  T005 définit le contrat que l'agent doit respecter pour publier un
+  enregistrement et le comportement attendu en cas d'échec. L'implémentation de
+  l'agent ne relève pas de ce dossier.\\
+T009, tests, validation, reprise et documentation &
+  Seconde tâche attribuée au même responsable. Elle dépend des résultats des
+  lots précédents et n'est pas traitée ici. Le chapitre~\ref{ch:recette} lui
+  transmet des critères d'acceptation déjà formulés, qui devront être exécutés
+  et archivés dans ce cadre.\\
+\end{longtable}
