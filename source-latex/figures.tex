@@ -8,7 +8,7 @@
 \newcommand{\fline}[1]{{\tiny\ttfamily #1}}
 
 % ------------------------------------------------------- figure : architecture
-\newcommand{\figArchitecture}{%
+\newcommand{\figArchitecture}{\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
 
   % ---- panneau 1 : repartition physique
@@ -83,10 +83,10 @@
     {La carte réseau unique par hôte et le commutateur SW1 unique restent des
      dépendances communes. La redondance couvre la perte d'une machine virtuelle
      ou d'un hôte, et non celle de SW1 ou du routeur R1.};
-\end{tikzpicture}}
+\end{tikzpicture}}}
 
 % -------------------------------------------------------------- figure : zones
-\newcommand{\figZones}{%
+\newcommand{\figZones}{\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
 
   \node[titrepan] at (0,62) {Espace direct};
@@ -126,10 +126,10 @@
      pour $1\leqslant n\leqslant 50$\\[3pt]
      {\tiny Exemple pour $n=7$ : \texttt{tenant-007.gandal.internal} et
       \texttt{70.30.10.in-addr.arpa}, préfixe \texttt{10.30.70.0/24}.}};
-\end{tikzpicture}}
+\end{tikzpicture}}}
 
 % ----------------------------------------------------------- figure : sequence
-\newcommand{\figSequence}{%
+\newcommand{\figSequence}{\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
 
   \foreach \x/\y/\n/\ti/\la/\lb in {%
@@ -159,10 +159,10 @@
     {Échec de publication ou de contrôle : l'opération reste observable en état dégradé,};
   \node[font=\tiny,text=gdred] at (79,7)
     {l'adresse n'est pas rendue au pool et une alerte est levée.};
-\end{tikzpicture}}
+\end{tikzpicture}}}
 
 % ------------------------------------------------------------- figure : chemin
-\newcommand{\figChemin}{%
+\newcommand{\figChemin}{\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[x=1mm,y=1mm,every node/.style={font=\scriptsize}]
 
   \node[bloc,minimum width=34mm,minimum height=13mm,anchor=south west] (vm) at (0,64)
@@ -215,4 +215,4 @@
      de cache et entre dans la clé du cache paquet : deux vues distinctes ne peuvent
      jamais partager une réponse.} Un contrôle placé dans \texttt{preresolve()} seul
      n'offrirait pas cette garantie.};
-\end{tikzpicture}}
+\end{tikzpicture}}}

@@ -1,6 +1,6 @@
 # Projet GANDAL, equipe 20
 
-Depot des livrables de FOMETHE SOMBANANG Maximilien pour le projet GANDAL
+Depot des livrables de FOMETHE SOBMBANANG MAXIMILIEN pour le projet GANDAL
 (cellule Reseaux et Securite).
 
 ## Livrables
@@ -10,13 +10,16 @@ place du service DNS.
 
 | Fichier | Composition |
 | --- | --- |
-| `T005_Mise_en_place_du_DNS_GANDAL_LaTeX.pdf` | LaTeX, police Latin Modern. Version de reference. |
+| `T005_Mise_en_place_du_DNS_GANDAL_LaTeX.pdf` | LaTeX, police Latin Modern, identite ENSPY orange. Version de reference. |
 | `T005_Mise_en_place_du_DNS_GANDAL.pdf` | ReportLab, premiere composition. |
 
 La version LaTeX emploie la typographie classique des publications
 scientifiques et formalise en notation mathematique le plan d'adressage, le
 calcul du nombre de zones et d'enregistrements, la contrainte de MTU et la
-fonction d'etiquetage des vues.
+fonction d'etiquetage des vues. Elle porte une identite visuelle propre :
+orange Polytechnique en couleur directrice, anthracite pour le texte,
+couverture a bandeau pleine largeur, numeros de chapitre en pave plein,
+filets de tableau orange et paragraphes au carre.
 
 Le dossier Il couvre la conception du service, les
 configurations de reference des quatre instances, le cycle de vie des

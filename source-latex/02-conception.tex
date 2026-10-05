@@ -113,17 +113,17 @@ d'infrastructure, puis une zone directe et une zone inverse par tenant,
 
 \begin{longtable}{@{}R{0.21}R{0.30}C{0.13}R{0.36}@{}}
 \caption{Inventaire des zones à créer}\label{tab:zones}\\
-\toprule
+\hautfilet
 \textbf{Catégorie} & \textbf{Nom ou intervalle} & \textbf{Nombre} &
 \textbf{Contenu}\\
-\midrule
+\medfilet
 \endfirsthead
-\toprule
+\hautfilet
 \textbf{Catégorie} & \textbf{Nom ou intervalle} & \textbf{Nombre} &
 \textbf{Contenu}\\
-\midrule
+\medfilet
 \endhead
-\bottomrule
+\basfilet
 \endfoot
 Zone racine interne & \zone{gandal.internal} & 1 &
   SOA, NS, adresses des serveurs, délégations\\
@@ -136,7 +136,7 @@ Inverses d'infrastructure & \zone{0, 1, 2, 4, 5, 6, 7, 8, 10, 16, 17
   un \ip{/24} inverse couvre les \ip{/28} et \ip{/29} qu'il contient\\
 Inverses tenant & \zone{64} à \zone{113} \zone{.30.10.in-addr.arpa} & 50 &
   tenant $n$ associé à l'octet $63+n$\\
-\midrule
+\medfilet
 \textbf{Total} & & \textbf{113} &
   volume compatible avec une base locale\\
 \end{longtable}
@@ -159,17 +159,17 @@ de H2 ou de H3.
 \begin{longtable}{@{}R{0.17}R{0.17}R{0.17}R{0.49}@{}}
 \caption{Effet de la perte d'un hôte sur le service de résolution}
 \label{tab:pannes}\\
-\toprule
+\hautfilet
 \textbf{Scénario} & \textbf{Autoritatifs restants} &
 \textbf{Récursifs restants} & \textbf{Conséquence}\\
-\midrule
+\medfilet
 \endfirsthead
-\toprule
+\hautfilet
 \textbf{Scénario} & \textbf{Autoritatifs restants} &
 \textbf{Récursifs restants} & \textbf{Conséquence}\\
-\midrule
+\medfilet
 \endhead
-\bottomrule
+\basfilet
 \endfoot
 Fonctionnement nominal & ns1 (H1), ns2 (H3) & rec1 (H2), rec2 (H1) &
   Service complet\\
@@ -222,15 +222,15 @@ inégalités avec un facteur de sécurité confortable.
 
 \begin{longtable}{@{}R{0.28}R{0.14}R{0.58}@{}}
 \caption{Politique de durée de vie}\label{tab:ttl}\\
-\toprule
+\hautfilet
 \textbf{Paramètre} & \textbf{Valeur} & \textbf{Justification}\\
-\midrule
+\medfilet
 \endfirsthead
-\toprule
+\hautfilet
 \textbf{Paramètre} & \textbf{Valeur} & \textbf{Justification}\\
-\midrule
+\medfilet
 \endhead
-\bottomrule
+\basfilet
 \endfoot
 SOA \opt{refresh} & 3\,600 s &
   Fréquence de contrôle de ns2 en l'absence de NOTIFY ; la réplication normale
@@ -294,15 +294,15 @@ du débit d'écriture de l'agent le justifie.
 \small
 \caption{Dimensionnement proposé des machines virtuelles}\label{tab:vm}
 \begin{tabular}{@{}R{0.14}C{0.13}C{0.12}C{0.12}R{0.49}@{}}
-\toprule
+\hautfilet
 \textbf{Instance} & \textbf{Processeur} & \textbf{Mémoire} & \textbf{Disque} &
 \textbf{Remarque}\\
-\midrule
+\medfilet
 ns1, ns2 & 2 vCPU & 2 GiB & 20 GiB &
   Base SQLite, journal local, export des zones\\
 rec1, rec2 & 2 vCPU & 4 GiB & 20 GiB &
   Mémoire dimensionnée pour le cache d'enregistrements et le cache paquet\\
-\bottomrule
+\basfilet
 \end{tabular}
 \end{table}
 
@@ -364,9 +364,9 @@ les paramètres remis aux Templates.
 \caption{Consommation du profil DNS par les interfaces du lot Services Network}
 \label{tab:profil}
 \begin{tabular}{@{}R{0.26}R{0.74}@{}}
-\toprule
+\hautfilet
 \textbf{Interface} & \textbf{Usage du profil}\\
-\midrule
+\medfilet
 IF-NS-02, vers DHCP &
   \opt{resolvers} alimente l'option 6, \opt{search\_domains} l'option 15 et
   l'option 119. Le serveur Kea ne redéfinit aucune de ces valeurs localement.\\
@@ -379,7 +379,7 @@ IF-NS-03, vers VNet et SDN &
 IF-NS-05, vers Backend par l'agent &
   \opt{forward\_zone} et \opt{reverse\_zone} désignent les deux zones à modifier
   lors d'une publication ou d'un retrait.\\
-\bottomrule
+\basfilet
 \end{tabular}
 \end{table}
 

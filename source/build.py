@@ -64,7 +64,7 @@ def main():
     register_fonts()
     build_styles()
     doc = Doc(OUT, title="Mise en place du service DNS GANDAL, tache T005",
-              author="FOMETHE SOMBANANG Maximilien",
+              author="FOMETHE SOBMBANANG MAXIMILIEN",
               subject="Projet GANDAL, cellule Reseaux et Securite, tache T005",
               creator="Cellule Reseaux et Securite, projet GANDAL")
     story = content.story(doc)

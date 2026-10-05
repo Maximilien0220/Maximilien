@@ -20,10 +20,10 @@ distincte.
 \small
 \caption{Scénarios de divulgation et contre-mesures}\label{tab:scenarios}
 \begin{tabular}{@{}R{0.30}R{0.33}R{0.37}@{}}
-\toprule
+\hautfilet
 \textbf{Scénario} & \textbf{Ce qui serait divulgué} &
 \textbf{Contre-mesure retenue}\\
-\midrule
+\medfilet
 Interrogation directe d'un serveur autoritatif par une machine tenant &
   Le serveur autoritatif répondrait pour toute zone hébergée, y compris celles
   des autres tenants. &
@@ -37,7 +37,7 @@ Requête vers une zone étrangère au travers du résolveur partagé &
   Le résolveur résout toutes les zones internes pour tous ses clients. &
   Politique de sélection des zones indexée sur l'adresse source
   (section~\ref{sec:vue}).\\
-\bottomrule
+\basfilet
 \end{tabular}
 \end{table}
 
@@ -116,9 +116,9 @@ peuvent alors jamais partager une entrée de cache.
 \small
 \caption{Vues définies par la politique de sélection des zones}\label{tab:vues}
 \begin{tabular}{@{}C{0.12}R{0.41}R{0.47}@{}}
-\toprule
+\hautfilet
 \textbf{$\tau$} & \textbf{Adresses source} & \textbf{Portée de résolution}\\
-\midrule
+\medfilet
 1 & Plan de gestion \ip{10.30.0.0/24}, VNet Services \ip{10.30.4.0/24},
   Monitoring \ip{10.30.5.0/24}, pool VPN administrateur \ip{10.30.16.32/28} &
   Vue administration : résolution de l'ensemble de l'espace interne et de
@@ -131,7 +131,7 @@ $1000+n$ & Préfixe du tenant $n$, soit \ip{10.30.(63+n).0/24} &
   Espace public uniquement ; tout nom interne reçoit \opt{REFUSED}.\\
 aucune & Source hors \opt{allow-from} &
   La requête n'est pas traitée par le résolveur.\\
-\bottomrule
+\basfilet
 \end{tabular}
 \end{table}
 
@@ -145,17 +145,17 @@ et IF-INT-07.
 
 \begin{longtable}{@{}R{0.21}R{0.17}R{0.13}R{0.16}R{0.33}@{}}
 \caption{Matrice de flux du service DNS}\label{tab:matrice}\\
-\toprule
+\hautfilet
 \textbf{Source} & \textbf{Destination} & \textbf{Service} &
 \textbf{Décision} & \textbf{Motif}\\
-\midrule
+\medfilet
 \endfirsthead
-\toprule
+\hautfilet
 \textbf{Source} & \textbf{Destination} & \textbf{Service} &
 \textbf{Décision} & \textbf{Motif}\\
-\midrule
+\medfilet
 \endhead
-\bottomrule
+\basfilet
 \endfoot
 VNet tenant \ip{10.30.(63+n).0/24} & \ip{10.30.4.12}, \ip{10.30.4.13} &
   UDP et TCP 53 & Autoriser & Seul point de résolution offert aux tenants\\

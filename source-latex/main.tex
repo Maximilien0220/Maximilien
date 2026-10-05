@@ -13,72 +13,81 @@
 % ---------------------------------------------------------------- couverture
 \begin{titlepage}
 \thispagestyle{empty}
-\setlength{\parindent}{0pt}
+\setlength{\parindent}{0pt}\setlength{\parskip}{0pt}
+
 \begin{tikzpicture}[remember picture,overlay]
-  \fill[gdnavy] (current page.north west) rectangle
-       ($(current page.south west)+(11mm,0)$);
-  \fill[gdgold] ($(current page.north west)+(11mm,-62mm)$) rectangle
-       ++(3.2mm,-46mm);
-  \draw[gdrule,line width=0.8pt]
-       ($(current page.north east)+(-60mm,-20mm)$) --
-       ($(current page.north east)+(-16mm,-64mm)$) --
-       ($(current page.north east)+(-16mm,-20mm)$) -- cycle;
-  \draw[gdgold,line width=0.7pt]
-       ($(current page.north east)+(-49mm,-31mm)$) --
-       ($(current page.north east)+(-24mm,-56mm)$) --
-       ($(current page.north east)+(-24mm,-31mm)$);
+  % Bandeau orange a fond perdu : porte l'institution et le titre.
+  \fill[poly] (current page.north west) rectangle
+       ($(current page.north east)+(0,-117mm)$);
+
+  % Motif thematique : propagation d'une resolution, arcs concentriques.
+  \begin{scope}
+    \clip (current page.south east) rectangle
+          ($(current page.south east)+(-88mm,45mm)$);
+    \foreach \r in {14,24,34,44,54,64,74,84}{
+      \draw[polyvif,line width=0.5pt,opacity=0.5]
+        ($(current page.south east)+(-13mm,11mm)$) circle (\r mm);
+    }
+    \fill[poly] ($(current page.south east)+(-13mm,11mm)$) circle (2.2mm);
+  \end{scope}
+
+  % Reglure de reperage dans la marge de pied.
+  \foreach \i in {0,...,6}{
+    \fill[poly,opacity=0.85]
+      ($(current page.south west)+(24mm+\i*11mm,13mm)$) rectangle ++(5mm,1.2mm);
+  }
 \end{tikzpicture}
 
-\vspace*{18mm}
-{\color{gdnavy}\bfseries\large Université de Yaoundé I\par}
-{\color{gdnavy}\bfseries\large École Nationale Supérieure Polytechnique de Yaoundé\par}
-\vspace{1.5mm}
-{\color{gdgrey}\normalsize Département de Génie Informatique\par}
+\vspace*{11mm}
+\begin{minipage}{\textwidth}
+  \color{white}
+  {\scshape\large\bfseries Université de Yaoundé I\par}
+  \vspace{1mm}
+  {\scshape\large\bfseries École Nationale Supérieure Polytechnique\par}
+  \vspace{2.5mm}
+  {\color{polypale}\small Département de Génie Informatique
+   \quad\textperiodcentered\quad Cellule Réseaux et Sécurité\par}
 
-\vspace{40mm}
+  \vspace{11mm}
+  {\color{white}\hrule height 0.8pt width 46mm}
+  \vspace{7mm}
 
-{\scshape\bfseries\color{gdteal}\small
- Dossier de réalisation GANDAL \quad\textbar\quad Tâche T005\par}
+  {\fontsize{32}{37}\selectfont\bfseries Mise en place\\[1mm]
+   du service DNS\par}
+\end{minipage}
+
+\vspace{20mm}
+
+{\color{poly}\scshape\bfseries\normalsize
+ Dossier de réalisation \quad\textperiodcentered\quad Tâche T005\par}
+\vspace{4mm}
+{\color{encre}\large\itshape
+ Conception détaillée, configurations et procédures d'exploitation\\
+ du socle de résolution de noms\par}
 \vspace{5mm}
-
-{\color{gdnavy}\bfseries\fontsize{30}{36}\selectfont
- Mise en place\\[2mm] du service DNS\par}
-
-\vspace{6mm}
-{\color{gdgrey}\large\itshape
- Conception détaillée, configurations et procédures\\
- d'exploitation du socle de résolution de noms\par}
-
-\vspace{7mm}
-{\color{gdgold}\rule{58mm}{1.4pt}\par}
-
-\vspace{16mm}
-{\color{gdgrey}\small Présenté dans le cadre de\par}
-\vspace{1mm}
-{\color{gdnavy}\large Spécifications d'ingénierie datacenter\par}
+{\color{ardoise}\small
+ Présenté dans le cadre des spécifications d'ingénierie datacenter,
+ projet GANDAL, équipe 20.\par}
 
 \vfill
 
-\noindent
-\begin{minipage}[t]{0.52\textwidth}
-  {\scriptsize\scshape\bfseries\color{gdteal} Réalisé par\par}
-  \vspace{1.5mm}
-  {\color{gdnavy}\large FOMETHE SOMBANANG Maximilien\par}
-  {\color{gdgrey}\small Équipe 20, projet GANDAL\par}
-\end{minipage}%
-\begin{minipage}[t]{0.48\textwidth}
-  {\scriptsize\scshape\bfseries\color{gdteal} Périmètre\par}
-  \vspace{1.5mm}
-  {\color{gdnavy}\large Cellule Réseaux et Sécurité\par}
-  {\color{gdgrey}\small Lot Services Network, tâche T005\par}
-\end{minipage}
+\begin{tabular}{@{}p{0.40\textwidth}p{0.32\textwidth}p{0.24\textwidth}@{}}
+\hautfilet
+{\scriptsize\scshape\bfseries\color{poly}Réalisé par} &
+{\scriptsize\scshape\bfseries\color{poly}Tâche et cellule} &
+{\scriptsize\scshape\bfseries\color{poly}Version}\\[3pt]
+{\color{encre}\large FOMETHE SOBMBANANG\newline MAXIMILIEN} &
+{\color{encre}T005, mettre en place le DNS} &
+{\color{encre}Version 1.0}\\[2pt]
+{\color{ardoise}\small Équipe 20, projet GANDAL} &
+{\color{ardoise}\small Lot Services Network} &
+{\color{ardoise}\small 5 octobre 2026}\\
+\basfilet
+\end{tabular}
 
-\vspace{7mm}
-{\color{gdrule}\rule{\textwidth}{0.6pt}\par}
-\vspace{2mm}
-\noindent
-{\color{gdgrey}\small Année universitaire 2025 / 2026 \hfill
- Version 1.0 \quad\textbar\quad 5 octobre 2026\par}
+\vspace{4mm}
+{\color{ardoise}\scriptsize Année universitaire 2025 / 2026\par}
+\vspace{14mm}
 \end{titlepage}
 
 % --------------------------------------------------------- pieces liminaires

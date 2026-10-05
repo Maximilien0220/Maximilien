@@ -42,7 +42,7 @@ def story(doc):
 
     t = Table([[Paragraph("RÉALISÉ PAR", S["cover_lab"]),
                 Paragraph("PÉRIMÈTRE", S["cover_lab"])],
-               [Paragraph("FOMETHE SOMBANANG Maximilien", S["cover_val"]),
+               [Paragraph("FOMETHE SOBMBANANG MAXIMILIEN", S["cover_val"]),
                 Paragraph("Cellule Réseaux et Sécurité", S["cover_val"])],
                [Paragraph("Équipe 20, projet GANDAL", S["cover_small"]),
                 Paragraph("Services Network, tâche T005", S["cover_small"])]],
@@ -74,7 +74,7 @@ def story(doc):
     rows = [
         ["Identifiant", "T005"],
         ["Intitulé", "Mettre en place le DNS"],
-        ["Responsable", "FOMETHE SOMBANANG Maximilien"],
+        ["Responsable", "FOMETHE SOBMBANANG MAXIMILIEN"],
         ["Pondération et priorité", "8 / 10, priorité haute"],
         ["Cellule", "Réseaux et Sécurité, lot Services Network"],
         ["Prérequis consommés",

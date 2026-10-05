@@ -1,5 +1,6 @@
 % ---------------------------------------------------------------------------
-%  Preambule : typographie Latin Modern, mise en page et environnements
+%  Identite visuelle ENSPY : orange directeur, anthracite, filets fins.
+%  Composition Latin Modern, pleine largeur, paragraphes au carre.
 %  Projet GANDAL, tache T005
 % ---------------------------------------------------------------------------
 
@@ -17,64 +18,103 @@
 \usepackage{amsmath,amssymb}
 \usepackage{textcomp}
 
-\usepackage[a4paper,top=27mm,bottom=25mm,left=26mm,right=24mm,
-            headheight=14pt,headsep=10mm,footskip=13mm]{geometry}
+\usepackage[a4paper,top=30mm,bottom=27mm,left=24mm,right=28mm,
+            headheight=15pt,headsep=8mm,footskip=15mm]{geometry}
 
+% ------------------------------------------------------------------- palette
 \usepackage{xcolor}
-\definecolor{gdnavy}{HTML}{1B3A57}
-\definecolor{gdteal}{HTML}{146B6B}
-\definecolor{gdgold}{HTML}{B08432}
-\definecolor{gdgrey}{HTML}{5C6670}
-\definecolor{gdrule}{HTML}{C9CDD2}
-\definecolor{gdlight}{HTML}{F2F1EC}
-\definecolor{gdcode}{HTML}{F5F6F7}
-\definecolor{gdbox}{HTML}{EDF3F3}
-\definecolor{gdwarn}{HTML}{FAF5EA}
-\definecolor{gdred}{HTML}{A33A3A}
+\definecolor{poly}{HTML}{E2690B}        % orange directeur, Polytechnique
+\definecolor{polyvif}{HTML}{F79020}     % orange clair, aplats secondaires
+\definecolor{polypale}{HTML}{FDF1E4}    % teinte tres pale, fonds d'encadres
+\definecolor{encre}{HTML}{23272B}       % anthracite, texte et titres
+\definecolor{ardoise}{HTML}{5D6771}     % gris froid, texte secondaire
+\definecolor{filet}{HTML}{CFD4D8}       % filets fins
+\definecolor{craie}{HTML}{F4F2EF}       % fond des listings
+\definecolor{brique}{HTML}{A6381F}      % refus, alertes
+\definecolor{olive}{HTML}{6E6A2A}       % troisieme accent, parcimonieux
+
+% Alias conserves pour les schemas, dont la geometrie est inchangee.
+\colorlet{gdnavy}{encre}
+\colorlet{gdteal}{poly}
+\colorlet{gdgold}{olive}
+\colorlet{gdgrey}{ardoise}
+\colorlet{gdrule}{filet}
+\colorlet{gdlight}{craie}
+\colorlet{gdcode}{craie}
+\colorlet{gdbox}{polypale}
+\colorlet{gdwarn}{polypale}
+\colorlet{gdred}{brique}
+
+\color{encre}
 
 % --------------------------------------------------------------- sectionnement
 \usepackage{titlesec}
-\titleformat{\chapter}[display]
-  {\normalfont\LARGE\bfseries\color{gdnavy}}
-  {\normalsize\normalfont\scshape\color{gdteal}\chaptertitlename~\thechapter}
-  {6pt}
-  {\LARGE}
-  [{\vspace{4pt}\color{gdgold}\titlerule[1.1pt]}]
-\titlespacing*{\chapter}{0pt}{-16pt}{24pt}
 
-\titleformat{\section}
-  {\normalfont\large\bfseries\color{gdnavy}}{\thesection}{0.8em}{}
-\titleformat{\subsection}
-  {\normalfont\normalsize\bfseries\color{gdteal}}{\thesubsection}{0.7em}{}
+% Chapitre numerote : pave orange portant le numero, titre a cote,
+% filet orange epais en dessous.
+\titleformat{\chapter}[hang]
+  {\normalfont\LARGE\bfseries\color{encre}\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000}
+  {\colorbox{poly}{\parbox[c][13mm][c]{13mm}{%
+     \centering\color{white}\fontsize{26}{26}\selectfont\bfseries\thechapter}}%
+   \hspace{6mm}}
+  {0pt}
+  {}
+  [{\vspace{3.5mm}{\color{poly}\titlerule[2.2pt]}}]
+\titlespacing*{\chapter}{0pt}{-14pt}{22pt}
+
+% Chapitre non numerote : titre seul, meme filet.
+\titleformat{name=\chapter,numberless}[display]
+  {\normalfont}
+  {}
+  {0pt}
+  {\LARGE\bfseries\color{encre}\raggedright}
+  [{\vspace{3.5mm}{\color{poly}\titlerule[2.2pt]}}]
+\titlespacing*{name=\chapter,numberless}{0pt}{-14pt}{22pt}
+
+% Section : numero en orange, titre anthracite, filet clair de rappel.
+\titleformat{\section}[hang]
+  {\normalfont\large\bfseries\color{encre}}
+  {\color{poly}\thesection}{0.75em}{}
+  [{\vspace{1.5pt}{\color{filet}\titlerule[0.5pt]}}]
+\titleformat{\subsection}[hang]
+  {\normalfont\normalsize\bfseries\scshape\color{encre}}
+  {\color{poly}\thesubsection}{0.7em}{}
 \titleformat{\subsubsection}[runin]
-  {\normalfont\normalsize\bfseries}{}{0pt}{}[.\,]
-\titlespacing*{\section}{0pt}{16pt plus 3pt minus 2pt}{7pt}
-\titlespacing*{\subsection}{0pt}{12pt plus 2pt minus 2pt}{5pt}
+  {\normalfont\normalsize\bfseries\color{encre}}{}{0pt}{}[.\,]
+
+\titlespacing*{\section}{0pt}{18pt plus 3pt minus 2pt}{8pt}
+\titlespacing*{\subsection}{0pt}{13pt plus 2pt minus 2pt}{5pt}
 
 \setcounter{secnumdepth}{2}
 \setcounter{tocdepth}{2}
 
 % ------------------------------------------------------------- en-tetes et pieds
 \usepackage{fancyhdr}
-\fancypagestyle{gandal}{%
+\fancypagestyle{enspy}{%
   \fancyhf{}%
-  \renewcommand{\headrulewidth}{0.4pt}%
-  \renewcommand{\footrulewidth}{0.4pt}%
-  \fancyhead[L]{\footnotesize\color{gdgrey}\leftmark}%
-  \fancyfoot[L]{\scriptsize\color{gdgrey}\textsc{Projet GANDAL \quad Cellule
-                Réseaux et Sécurité \quad Tâche T005}}%
-  \fancyfoot[R]{\small\color{gdnavy}\textbf{\thepage}}%
+  \renewcommand{\headrule}{{\color{poly}\hrule height 1.2pt}}%
+  \renewcommand{\footrulewidth}{0pt}%
+  \fancyhead[L]{\footnotesize\scshape\color{ardoise}\leftmark}%
+  \fancyhead[R]{\footnotesize\scshape\color{poly}GANDAL \textperiodcentered\ T005}%
+  \fancyfoot[L]{\scriptsize\color{ardoise}%
+     École Nationale Supérieure Polytechnique de Yaoundé
+     \quad\textperiodcentered\quad Cellule Réseaux et Sécurité}%
+  \fancyfoot[R]{\colorbox{poly}{\color{white}\small\bfseries\;\thepage\;}}%
 }
 \fancypagestyle{plain}{%
   \fancyhf{}%
+  % le filet orange de l'en-tete est redefini en dur dans le style enspy :
+  % il faut le neutraliser explicitement sur les pages d'ouverture.
+  \renewcommand{\headrule}{}%
   \renewcommand{\headrulewidth}{0pt}%
-  \renewcommand{\footrulewidth}{0.4pt}%
-  \fancyfoot[L]{\scriptsize\color{gdgrey}\textsc{Projet GANDAL \quad Cellule
-                Réseaux et Sécurité \quad Tâche T005}}%
-  \fancyfoot[R]{\small\color{gdnavy}\textbf{\thepage}}%
+  \renewcommand{\footrulewidth}{0pt}%
+  \fancyfoot[L]{\scriptsize\color{ardoise}%
+     École Nationale Supérieure Polytechnique de Yaoundé
+     \quad\textperiodcentered\quad Cellule Réseaux et Sécurité}%
+  \fancyfoot[R]{\colorbox{poly}{\color{white}\small\bfseries\;\thepage\;}}%
 }
 \renewcommand{\chaptermark}[1]{\markboth{\thechapter\quad #1}{}}
-\pagestyle{gandal}
+\pagestyle{enspy}
 
 % ------------------------------------------------------------------- tableaux
 \usepackage{booktabs}
@@ -82,34 +122,44 @@
 \usepackage{longtable}
 \usepackage{multirow}
 \usepackage{colortbl}
-\renewcommand{\arraystretch}{1.22}
+\renewcommand{\arraystretch}{1.25}
 \setlength{\tabcolsep}{5pt}
+\arrayrulecolor{filet}
+
+% Filets de tableau propres au dossier : encadrement orange, separation claire.
+\newcommand{\hautfilet}{\arrayrulecolor{poly}\specialrule{1.1pt}{0pt}{3pt}%
+                        \arrayrulecolor{filet}}
+\newcommand{\basfilet}{\arrayrulecolor{poly}\specialrule{1.1pt}{3pt}{0pt}%
+                       \arrayrulecolor{filet}}
+\newcommand{\medfilet}{\arrayrulecolor{ardoise}\specialrule{0.45pt}{2.5pt}{3.5pt}%
+                       \arrayrulecolor{filet}}
 
 % Colonnes de largeur fractionnaire : la somme des fractions vaut 1
 \newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{\dimexpr#1\textwidth-2\tabcolsep-0.4pt}}
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{\dimexpr#1\textwidth-2\tabcolsep-0.4pt}}
 
-\newcommand{\thead}[1]{\textbf{\color{white}#1}}
-\newcommand{\entete}{\rowcolor{gdnavy}}
+\newcommand{\thead}[1]{\textsc{#1}}
 
 % --------------------------------------------------------------------- legendes
 \usepackage{caption}
-\captionsetup{font=small,labelfont=bf,labelsep=period,width=0.94\textwidth}
+\captionsetup{font=small,labelfont={bf,sc,color=poly},labelsep=quad,
+              width=0.95\textwidth}
 \captionsetup[table]{skip=5pt}
 \captionsetup[figure]{skip=9pt}
 
 % ----------------------------------------------------------------------- listes
 \usepackage{enumitem}
-\setlist[itemize]{label=\textbullet,leftmargin=1.35em,topsep=4pt,
-                  itemsep=2.5pt,parsep=0pt}
-\setlist[itemize,2]{label=\textendash,leftmargin=1.2em}
-\setlist[enumerate]{leftmargin=1.75em,topsep=4pt,itemsep=2.5pt,parsep=0pt}
+\setlist[itemize]{label=\textcolor{poly}{\textbullet},leftmargin=1.4em,
+                  topsep=5pt,itemsep=3pt,parsep=0pt}
+\setlist[itemize,2]{label=\textcolor{ardoise}{\guilsinglright},leftmargin=1.2em}
+\setlist[enumerate]{label=\textcolor{poly}{\bfseries\arabic*.},leftmargin=1.9em,
+                    topsep=5pt,itemsep=3pt,parsep=0pt}
 
 % ------------------------------------------------------------------- listings
 \usepackage{listings}
-\lstdefinestyle{gandal}{%
-  basicstyle=\ttfamily\scriptsize,
-  commentstyle=\color{gdgrey}\itshape,
+\lstdefinestyle{enspy}{%
+  basicstyle=\ttfamily\scriptsize\color{encre},
+  commentstyle=\color{ardoise}\itshape,
   columns=fullflexible,
   keepspaces=true,
   showstringspaces=false,
@@ -117,27 +167,26 @@
   breaklines=true,
   breakatwhitespace=false,
   breakindent=1.6em,
-  postbreak=\mbox{\textcolor{gdteal}{$\hookrightarrow$}\space},
-  frame=leftline,
+  postbreak=\mbox{\textcolor{poly}{$\hookrightarrow$}\space},
+  frame=single,
   framesep=7pt,
-  framerule=1.1pt,
-  rulecolor=\color{gdteal},
-  backgroundcolor=\color{gdcode},
-  xleftmargin=10pt,
-  xrightmargin=1pt,
-  aboveskip=10pt,
-  belowskip=4pt,
+  framerule=0.7pt,
+  rulecolor=\color{poly},
+  backgroundcolor=\color{craie},
+  % le cadre est trace framesep+framerule a l'exterieur du corps :
+  % ces marges l'alignent exactement sur le bloc de texte.
+  xleftmargin=8pt,
+  xrightmargin=8pt,
+  aboveskip=9pt,
+  belowskip=5pt,
   literate=%
     {é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {ë}{{\"e}}1
     {à}{{\`a}}1 {â}{{\^a}}1 {ù}{{\`u}}1 {û}{{\^u}}1
     {î}{{\^i}}1 {ï}{{\"i}}1 {ô}{{\^o}}1 {ç}{{\c c}}1
     {É}{{\'E}}1 {È}{{\`E}}1 {À}{{\`A}}1 {Ç}{{\c C}}1
 }
-\lstset{style=gandal}
-\lstdefinelanguage{pdnsconf}{%
-  morecomment=[l]{\#},
-  sensitive=true,
-}
+\lstset{style=enspy}
+\lstdefinelanguage{pdnsconf}{morecomment=[l]{\#},sensitive=true}
 \lstdefinelanguage{luapdns}{%
   morecomment=[l]{--},
   morestring=[b]",
@@ -148,58 +197,60 @@
 
 % ------------------------------------------------------------------- encadres
 \usepackage[most]{tcolorbox}
+% Encadre d'appui : cadre orange complet, fond tres pale.
 \newtcolorbox{encadre}[1][]{%
-  enhanced, breakable, boxrule=0pt, frame hidden,
-  borderline west={2.4pt}{0pt}{gdteal},
-  colback=gdbox, sharp corners, left=9pt, right=9pt, top=7pt, bottom=7pt,
+  enhanced, breakable, colback=polypale, colframe=poly,
+  boxrule=0.7pt, sharp corners, left=9pt, right=9pt, top=8pt, bottom=8pt,
   fontupper=\small, #1}
+% Encadre de decision : meme cadre, filet lateral epais pour le distinguer.
 \newtcolorbox{encadredecision}[1][]{%
-  enhanced, breakable, boxrule=0pt, frame hidden,
-  borderline west={2.4pt}{0pt}{gdgold},
-  colback=gdwarn, sharp corners, left=9pt, right=9pt, top=7pt, bottom=7pt,
+  enhanced, breakable, colback=white, colframe=encre,
+  boxrule=0.7pt, sharp corners, left=9pt, right=9pt, top=8pt, bottom=8pt,
+  borderline west={3pt}{0pt}{poly},
   fontupper=\small, #1}
 \newcommand{\titreencadre}[1]{%
-  {\footnotesize\bfseries\scshape\color{gdteal}#1\par}\vspace{2pt}}
+  {\footnotesize\bfseries\scshape\color{poly}#1\par}%
+  \vspace{1.5pt}{\color{poly}\hrule height 0.4pt width 28mm}\vspace{4pt}}
 \newcommand{\titreencadredec}[1]{%
-  {\footnotesize\bfseries\scshape\color{gdgold}#1\par}\vspace{2pt}}
+  {\footnotesize\bfseries\scshape\color{encre}#1\par}%
+  \vspace{1.5pt}{\color{poly}\hrule height 0.4pt width 28mm}\vspace{4pt}}
 
 % --------------------------------------------------------------------- figures
 \usepackage{tikz}
-\usetikzlibrary{babel,positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric,
-                shadows.blur,decorations.pathreplacing}
+\usetikzlibrary{babel,positioning,arrows.meta,calc,fit,backgrounds,
+                shapes.geometric,decorations.pathreplacing}
 \usepackage{float}
 
 \tikzset{
-  bloc/.style   ={draw=gdnavy, line width=0.6pt, rounded corners=1.5pt,
+  bloc/.style   ={draw=encre, line width=0.6pt, rounded corners=0pt,
                   align=center, inner sep=4pt, font=\scriptsize, fill=white},
-  blocteal/.style={bloc, draw=gdteal},
-  blocgold/.style={bloc, draw=gdgold},
-  blocrouge/.style={bloc, draw=gdred},
-  blocgris/.style={bloc, draw=gdgrey},
-  hote/.style   ={draw=gdnavy, line width=0.7pt, rounded corners=2pt,
-                  fill=gdlight, inner sep=5pt},
-  bande/.style  ={draw=gdteal, line width=0.6pt, dash pattern=on 2pt off 2pt,
-                  fill=gdbox, rounded corners=2pt, inner sep=6pt},
-  fl/.style     ={-{Stealth[length=4pt,width=3pt]}, line width=0.65pt,
-                  draw=gdteal},
-  flnavy/.style ={fl, draw=gdnavy},
-  flgris/.style ={fl, draw=gdgrey, dash pattern=on 2pt off 1.6pt},
-  flgold/.style ={fl, draw=gdgold},
-  flrouge/.style={fl, draw=gdred, dash pattern=on 2.4pt off 1.8pt},
-  etiq/.style   ={font=\tiny, inner sep=1.5pt, text=gdnavy},
-  etiqt/.style  ={etiq, text=gdteal},
-  etiqr/.style  ={etiq, text=gdred},
-  etiqg/.style  ={etiq, text=gdgrey},
-  titrepan/.style={font=\scriptsize\bfseries\scshape, text=gdteal, anchor=west},
+  blocteal/.style={bloc, draw=poly, line width=0.8pt},
+  blocgold/.style={bloc, draw=olive},
+  blocgris/.style={bloc, draw=ardoise},
+  blocrouge/.style={bloc, draw=brique},
+  hote/.style   ={draw=encre, line width=0.7pt, rounded corners=0pt,
+                  fill=craie, inner sep=5pt},
+  bande/.style  ={draw=poly, line width=0.6pt, dash pattern=on 2pt off 2pt,
+                  fill=polypale, rounded corners=0pt, inner sep=6pt},
+  fl/.style     ={-{Stealth[length=4pt,width=3pt]}, line width=0.7pt, draw=poly},
+  flnavy/.style ={fl, draw=encre},
+  flgris/.style ={fl, draw=ardoise, dash pattern=on 2pt off 1.6pt},
+  flgold/.style ={fl, draw=olive},
+  flrouge/.style={fl, draw=brique, dash pattern=on 2.4pt off 1.8pt},
+  etiq/.style   ={font=\tiny, inner sep=1.5pt, text=encre},
+  etiqt/.style  ={etiq, text=poly},
+  etiqr/.style  ={etiq, text=brique},
+  etiqg/.style  ={etiq, text=ardoise},
+  titrepan/.style={font=\scriptsize\bfseries\scshape, text=poly, anchor=west},
 }
 
 % ------------------------------------------------------------------ references
 \usepackage{url}
 \usepackage[hidelinks,pdfusetitle]{hyperref}
 \hypersetup{
-  colorlinks=true, linkcolor=gdnavy, citecolor=gdnavy, urlcolor=gdteal,
+  colorlinks=true, linkcolor=poly, citecolor=poly, urlcolor=poly,
   pdftitle={Mise en place du service DNS GANDAL, tache T005},
-  pdfauthor={FOMETHE SOMBANANG Maximilien},
+  pdfauthor={FOMETHE SOBMBANANG MAXIMILIEN},
   pdfsubject={Projet GANDAL, cellule Reseaux et Securite, tache T005},
   pdfkeywords={GANDAL, DNS, PowerDNS, isolation multi-tenant, TSIG, DNSSEC},
 }
@@ -209,14 +260,13 @@
 \newcommand{\dir}[1]{\texttt{#1}}
 \newcommand{\opt}[1]{\texttt{#1}}
 \newcommand{\ip}[1]{\texttt{#1}}
-\newcommand{\statut}[1]{\textsc{#1}}
+\newcommand{\statut}[1]{\textsc{\color{brique}#1}}
 \newcommand{\exig}[1]{\textsc{#1}}
+\providecommand{\num}[1]{#1}
 
-\newcommand{\interligne}{\vspace{2pt}}
-\setlength{\parskip}{3pt plus 1pt minus 0.5pt}
-\setlength{\emergencystretch}{2em}
+% Paragraphes au carre : pas d'alinea, respiration verticale entre blocs.
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6.5pt plus 2pt minus 1pt}
+\setlength{\emergencystretch}{2.2em}
 \widowpenalty=10000
 \clubpenalty=10000
-
-% siunitx absent de cette installation : passe-plat defensif
-\providecommand{\num}[1]{#1}
