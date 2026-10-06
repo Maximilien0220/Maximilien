@@ -55,7 +55,10 @@ independants et echoue si l'un d'eux signale une anomalie :
 1. signalements de TeX, c'est-a-dire toute ligne ou cellule trop large ;
 2. caracteres typographiques proscrits dans le texte compose ;
 3. chevauchements reels entre mots, mesures sur les boites englobantes ;
-4. extension de l'encre, au balayage raster a 200 points par pouce, avec
+4. mots qui se touchent sans se chevaucher, cas typique de deux colonnes de
+   tableau dont les contenus se rejoignent ; les indices mathematiques, qui
+   jouxtent leur base a dessein, sont ecartes du controle ;
+5. extension de l'encre, au balayage raster a 200 points par pouce, avec
    verification de la distance entre le corps et le pied de page.
 
 ### Version ReportLab, dans `source/`
