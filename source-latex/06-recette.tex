@@ -10,7 +10,7 @@ comportement d'ensemble du datacenter. Conformément à la règle du corpus, leu
 statut initial est \statut{non exécuté} et aucun résultat n'est présenté comme
 obtenu.
 
-\begin{longtable}{@{}C{0.07}R{0.20}R{0.38}R{0.35}@{}}
+\begin{longtable}{@{}C{0.09}R{0.19}R{0.37}R{0.35}@{}}
 \caption{Contrôles de recette de T005 ; statut initial de l'ensemble :
   \statut{non exécuté}}\label{tab:controles}\\
 \hautfilet
@@ -40,7 +40,7 @@ C04 & Transfert de zone refusé à un tiers &
   Transfert refusé ; le transfert signé demandé par ns2 reste possible\\
 C05 & Isolation entre tenants &
   depuis \ip{10.30.70.37} : \texttt{dig @10.30.4.12
-  gw.tenant-008.gandal.internal A} &
+  gw.tenant-008.\allowbreak gandal.internal A} &
   \opt{REFUSED}, sans divulgation de l'existence du nom\\
 C06 & Isolation de l'infrastructure &
   depuis \ip{10.30.70.37} : \texttt{dig @10.30.4.12 xo.infra.gandal.internal A} &
@@ -51,7 +51,7 @@ C07 & Récursion autorisée et bornée &
   \opt{NOERROR} dans le premier cas, absence de service dans le second\\
 C08 & Autoritatif inatteignable depuis un tenant &
   depuis \ip{10.30.70.37} : \texttt{dig +time=2 +tries=1 @10.30.4.10
-  gw.tenant-007.gandal.internal A} &
+  gw.tenant-007.\allowbreak gandal.internal A} &
   Absence de réponse, refus journalisé sur la passerelle\\
 C09 & Bascule sur perte d'une instance &
   Arrêt de ns1 puis requête sur ns2 ; arrêt de rec1 puis requête depuis un

@@ -47,8 +47,16 @@ cd source-latex && make
 
 Deux passes de `pdflatex` sont necessaires pour resoudre les renvois internes.
 Les quatre schemas sont traces en TikZ, les configurations composees avec
-`listings`. `make verifier` recherche les tirets longs proscrits dans le texte
-compose.
+`listings`.
+
+`make audit` lance `audit.py`, qui controle la mise en page sur quatre plans
+independants et echoue si l'un d'eux signale une anomalie :
+
+1. signalements de TeX, c'est-a-dire toute ligne ou cellule trop large ;
+2. caracteres typographiques proscrits dans le texte compose ;
+3. chevauchements reels entre mots, mesures sur les boites englobantes ;
+4. extension de l'encre, au balayage raster a 200 points par pouce, avec
+   verification de la distance entre le corps et le pied de page.
 
 ### Version ReportLab, dans `source/`
 
